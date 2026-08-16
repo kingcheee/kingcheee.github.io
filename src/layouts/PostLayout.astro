@@ -41,13 +41,13 @@ import { Image } from "astro:assets";
     </article>
   </main>
 
-  <!-- 본문 사진: 사진과 글을 한 행으로 묶는다 — 사진 옆엔 항상 글이 있다 (hero 제외, 2026-08-17).
-       마크다운 규칙: 사진과 그 옆에 앉을 글을 같은 문단에 쓴다 — `![...](...)  이어지는 문장...` -->
+  <!-- 본문 사진: 사진과 글을 한 행으로 묶는다 — 사진 옆엔 항상 글이 있고, 글은 사진 세로 중앙에 (hero 제외, 2026-08-17).
+       마크다운 규칙: `![...](...) <span>글...</span>` 한 문단 — span 없이 볼드를 쓰면 flex가 쪼갠다. -->
   <style is:global>
     article.prose p:has(> img:not(.hero-img)) {
       display: flex;
       gap: 1.25rem;
-      align-items: flex-start;
+      align-items: center;
     }
     article.prose p:has(> img:not(.hero-img)) img {
       width: 11rem;
