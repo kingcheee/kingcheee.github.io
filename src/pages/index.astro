@@ -1,0 +1,47 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import HorizontalCard from "../components/HorizontalCard.astro";
+import { getCollection } from "astro:content";
+import createSlug from "../lib/createSlug"
+
+const posts = (await getCollection("blog")).sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+
+const last_posts = posts.slice(0, 5);
+---
+
+<BaseLayout sideBarActiveItemID="home">
+  <div class="pb-12 mt-5">
+    <div class="text-xl py-1">안녕하세요 👋</div>
+    <div class="text-5xl font-bold">kingcheee입니다</div>
+    <div class="text-3xl py-3 font-bold">만든 것과 그때의 생각을 기록합니다</div>
+    <div class="py-2">
+      <text class="text-lg">
+        프로젝트를 하나 끝낼 때마다 — 무엇을 만들었고, 어디서 막혔고, 그때 무슨 생각을
+        했는지를 여기에 남깁니다. 첫 번째 독자는 미래의 나입니다.
+      </text>
+    </div>
+    <div class="mt-8">
+      <a class="btn" href="https://github.com/kingcheee" target="_blank">GitHub</a>
+    </div>
+  </div>
+
+  <div>
+    <div class="text-3xl w-full font-bold mb-5 mt-10">최근 글</div>
+  </div>
+
+  {
+    last_posts.map((post) => (
+      <>
+        <HorizontalCard
+          title={post.data.title}
+          img={post.data.heroImage}
+          desc={post.data.description}
+          url={"/blog/" + createSlug(post.data.title, post.slug)}
+          target="_self"
+          badge={post.data.badge}
+        />
+        <div class="divider my-0" />
+      </>
+    ))
+  }
+</BaseLayout>
