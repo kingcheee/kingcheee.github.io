@@ -7,10 +7,10 @@ h1, h2, h3, h4,
     color: #379427;
 }
 
-/* 본문 볼드는 검정 글자 + 초록 형광펜 (직각 모서리) */
+/* 본문 볼드는 검정 글자 + 차분한 초록 밴드 (직각 모서리) */
 strong {
     color: #111111;
-    background: #b7ff5e;
+    background: #c5e8ae;
     padding: 0.05em 0.25em;
     border-radius: 0;
     -webkit-box-decoration-break: clone;
