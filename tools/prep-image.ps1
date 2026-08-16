@@ -1,9 +1,10 @@
 # prep-image.ps1 — 블로그 삽입용 사진 전처리: 1:1 중앙 크롭 + 축소 + JPEG 재인코딩
-# 사용: powershell -File tools/prep-image.ps1 -In <원본> -Out <출력> [-Size 800] [-Quality 82]
+# 사용: powershell -File tools/prep-image.ps1 -In <원본> -Out <출력> [-Size 480] [-Quality 82]
+# 480 기본: 본문 사진은 PostLayout이 11rem(176px)로 왼쪽 플로트하므로 480이면 레티나까지 충분
 param(
     [Parameter(Mandatory = $true)][string]$In,
     [Parameter(Mandatory = $true)][string]$Out,
-    [int]$Size = 800,
+    [int]$Size = 480,
     [int]$Quality = 82
 )
 

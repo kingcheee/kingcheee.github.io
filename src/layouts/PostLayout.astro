@@ -15,7 +15,7 @@ import { Image } from "astro:assets";
 <BaseLayout title={title} description={description} image={heroImage}, ogType="article">
   <main class="md:flex md:justify-center">
     <article class="prose prose-lg max-w-[750px] prose-img:mx-auto">
-      {heroImage && <Image width={750} height={422} format="webp" src={heroImage} alt={title} class="w-full mb-6" />}
+      {heroImage && <Image width={750} height={422} format="webp" src={heroImage} alt={title} class="hero-img w-full mb-6" />}
       <h1 class="title my-2 text-4xl font-bold">{title}</h1>
       {pubDate && <time>{displayDate}</time>}
       <br />
@@ -40,6 +40,36 @@ import { Image } from "astro:assets";
       <slot />
     </article>
   </main>
+
+  <!-- 본문 사진: 왼쪽에 작게 띄우고 글이 오른쪽으로 흐른다 (hero 제외, 2026-08-17) -->
+  <style is:global>
+    article.prose img:not(.hero-img) {
+      float: left;
+      width: 11rem;
+      height: 11rem;
+      object-fit: cover;
+      border-radius: 0.75rem;
+      margin: 0.35rem 1.25rem 0.5rem 0;
+    }
+    article.prose h2,
+    article.prose h3,
+    article.prose blockquote,
+    article.prose .divider {
+      clear: both;
+    }
+    article.prose::after {
+      content: "";
+      display: block;
+      clear: both;
+    }
+    @media (max-width: 640px) {
+      article.prose img:not(.hero-img) {
+        width: 8.5rem;
+        height: 8.5rem;
+        margin-right: 1rem;
+      }
+    }
+  </style>
 
   <!-- ```mermaid 코드블록을 브라우저에서 다이어그램으로 렌더링 (CDN, 블록 있을 때만 로드) -->
   <script is:inline type="module" data-astro-rerun>

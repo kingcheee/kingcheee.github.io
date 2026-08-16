@@ -34,6 +34,14 @@
 - **볼드(strong)**: 검정 `#111111` 글자 + 초록 밴드 `#C5E8AE`, **직각 모서리**,
   `box-decoration-break: clone`(줄바꿈 시 밴드 유지). 형광색(`#B7FF5E`)·분홍은 시도 후 기각.
 
+## 본문 사진 (2026-08-17 확정)
+
+- 글 속 사진은 **왼쪽 플로트 11rem 정사각형**(모바일 8.5rem) — 글이 사진 오른쪽으로
+  흐른다. PostLayout.astro의 `is:global` 스타일. heroImage(`.hero-img`)는 제외.
+- h2/h3·blockquote·divider에 `clear: both` — 절이 바뀔 때 플로트가 끊긴다.
+- 원본은 넣지 않는다: `tools/prep-image.ps1`로 **1:1 중앙 크롭 + 480px** 재인코딩
+  (EXIF 회전 반영). 세로 원본 그대로는 "너무 크고 길다"로 반려된 결정.
+
 ## 구조
 
 - **상단 스티키 바** (Header.astro): 좌측 프로필 원형 + "김지우 🐢" 픽셀 로고,
