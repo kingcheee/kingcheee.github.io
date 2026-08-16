@@ -11,11 +11,22 @@ const last_posts = posts.slice(0, 5);
 
 <BaseLayout sideBarActiveItemID="home">
   <div class="min-h-[78vh] flex flex-col justify-center pb-8">
-    <div class="text-xl py-1">안녕하세요 👋</div>
-    <div class="text-5xl font-bold font-pixel">김지우입니다</div>
-    <div class="text-2xl py-4 font-bold text-primary font-pixel">불광불급</div>
-    <div class="mt-6">
-      <a class="btn btn-primary" href="https://github.com/kingcheee" target="_blank">GitHub</a>
+    <div class="flex flex-col-reverse md:flex-row items-center justify-between gap-10">
+      <div>
+        <div class="text-xl py-1">안녕하세요 👋</div>
+        <div class="text-5xl font-bold font-pixel">김지우입니다</div>
+        <div class="text-2xl py-4 font-bold text-primary font-pixel">불광불급</div>
+        <div class="mt-6">
+          <a class="btn btn-primary" href="https://github.com/kingcheee" target="_blank">GitHub</a>
+        </div>
+      </div>
+      <img
+        src="/turtle-hero.webp"
+        alt="거북이"
+        width="760"
+        height="538"
+        class="w-64 md:w-80 rounded-3xl shadow-lg shrink-0"
+      />
     </div>
     <div class="mt-16 self-center text-2xl opacity-50 animate-bounce" aria-hidden="true">↓</div>
   </div>

@@ -42,11 +42,12 @@ Astrofy 템플릿 기반 (https://github.com/manuelernestog/astrofy, 커밋 9398
   `astro:build:done`에서 깨진다. astro를 5로 올리기 전에는 sitemap을 올리지 마라
 - `rss.xml.js`의 핸들러 `get` → `GET` (Astro 4에서 소문자 제거됨)
 - 데모 콘텐츠(post1~3, store, services, cv, projects)와 저자 프로필·소셜 링크 제거
-- `public/profile.webp`·`social_img.webp`·`favicon.svg`는 생성한 임시 모노그램 —
-  실제 사진/로고로 교체 예정
+- 팔레트는 화이트 + 쨍한 초록(거북이 프로필 기준, `tailwind.config.cjs`의 turtle 테마).
+  제목·픽셀 글자·본문 볼드는 초록 — prose 영역은 `global.css`의 `.prose` 오버라이드가 담당
+  (typography 플러그인 색이 일반 선택자를 이기므로 지우면 안 된다. 2026-08-16 실측)
 
 ## 공백
 
 - About/CV/Projects 페이지 없음 — 의도된 상태. 인터뷰로 내용이 쌓이면 얹는다
-- 프로필 이미지가 임시 모노그램
 - README.md가 아직 템플릿(Astrofy) 원문 — 사이트 소개로 교체 필요
+- 멀티 채널 발행(네이버 블로그 등) 구상 중 — 채널 선정·업로드 방식 미정

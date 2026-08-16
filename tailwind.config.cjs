@@ -11,22 +11,22 @@ module.exports = {
 	},
 	plugins: [require("@tailwindcss/typography"),require("daisyui")],
 	daisyui: {
-		// 크림 디지털 가든 라이트 단일 테마. 팔레트 출처: 엉금이 스티커 (등딱지 연두·크림·먹색)
+		// 화이트 + 쨍한 초록 라이트 단일 테마. 팔레트 출처: 거북이 프로필 (초록 배경·등딱지)
 		themes: [
 			{
 				turtle: {
-					"primary": "#3F8636",
+					"primary": "#2F8A25",
 					"primary-content": "#FFFFFF",
-					"secondary": "#F5EBC4",
-					"secondary-content": "#4A431F",
-					"accent": "#7CBF6B",
-					"accent-content": "#14290F",
-					"neutral": "#2B2A20",
-					"neutral-content": "#FAF6E8",
-					"base-100": "#FBF8EE",
-					"base-200": "#F4EDDA",
-					"base-300": "#E7DFC2",
-					"base-content": "#332F1E",
+					"secondary": "#EAF6E4",
+					"secondary-content": "#2A5220",
+					"accent": "#55B93E",
+					"accent-content": "#12300B",
+					"neutral": "#242A1F",
+					"neutral-content": "#FFFFFF",
+					"base-100": "#FFFFFF",
+					"base-200": "#F3F7F0",
+					"base-300": "#E2EADD",
+					"base-content": "#23281E",
 					"info": "#5CA8D8",
 					"success": "#57A44B",
 					"warning": "#D9A520",

@@ -1,13 +1,34 @@
-/* 크림 디지털 가든 + 픽셀 헤딩 공통 터치 */
+/* 화이트 + 초록 공통 터치 */
 
-/* 제목·표시 텍스트는 Mona12 픽셀체, 본문은 Pretendard */
+/* 제목·표시 텍스트는 Mona12 픽셀체 + 초록. 본문은 Pretendard */
 h1, h2, h3, h4,
 .font-pixel {
     font-family: "Mona12", "Mona12 Text KR", "Pretendard Variable", Pretendard, sans-serif;
+    color: #379427;
+}
+
+/* 본문 볼드는 흰 바탕과 어울리는 초록 */
+strong {
+    color: #2f8a25;
+}
+
+/* prose(글 본문) 영역은 typography 플러그인 색이 이기므로 명시 오버라이드 */
+.prose strong {
+    color: #2f8a25;
+}
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4 {
+    color: #379427;
 }
 
 ::selection {
-    background: #cde8c4;
+    background: #d4efc9;
+}
+
+html {
+    scroll-behavior: smooth;
 }
 
 /* Mermaid 다이어그램: 가운데 정렬, 코드블록 배경 제거 */
@@ -16,8 +37,4 @@ h1, h2, h3, h4,
     justify-content: center;
     background: transparent;
     padding: 0;
-}
-
-html {
-    scroll-behavior: smooth;
 }
