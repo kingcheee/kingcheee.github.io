@@ -26,7 +26,6 @@
   },
   "devDependencies": {
     "@jjlabsio/md-to-naver-blog": "^2.0.0",
-    "@jjlabsio/mtnb": "^1.0.0",
     "@tailwindcss/typography": "^0.5.10"
   }
 }

@@ -1,9 +1,12 @@
 // 발행된 글을 네이버 블로그용으로 변환해 미리보기(서식 복사 버튼)를 띄운다.
 // 사용: npm run naver -- <글-슬러그>   (예: npm run naver -- 2026-08-16-building-this-blog)
 // NAVER_PREPARE_ONLY=1 이면 변환 파일만 만들고 미리보기는 띄우지 않는다(검증용).
+// 주의: @jjlabsio/mtnb의 preview는 macOS 전용(`open`)이라 Windows에서 깨진다 —
+// 그래서 미리보기 HTML은 여기서 직접 만들고 `start`로 연다 (2026-08-17 실측).
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { execSync, spawn } from "node:child_process";
 import path from "node:path";
+import { convert } from "@jjlabsio/md-to-naver-blog";
 
 const SITE = "https://kingcheee.github.io";
 
@@ -60,11 +63,50 @@ if (localImages.length) {
 console.log("아래 미리보기에서 [서식 복사] → 네이버 본문에 Ctrl+V → 발행");
 console.log("========================================\n");
 
+// 네이버 에디터 호환 HTML로 변환해 [서식 복사] 버튼이 달린 미리보기 페이지를 만든다
+const { html } = convert(readFileSync(workPath, "utf8"));
+const previewPath = path.resolve("naver-out", slug + ".html");
+const page = `<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><title>네이버 서식 복사 — ${title}</title>
+<style>
+body{font-family:'Malgun Gothic',sans-serif;max-width:800px;margin:2rem auto;padding:0 1rem}
+#bar{position:sticky;top:0;background:#fff;padding:1rem 0;border-bottom:2px solid #2f8a25}
+button{font-size:1.2rem;padding:.6rem 1.4rem;background:#2f8a25;color:#fff;border:none;border-radius:8px;cursor:pointer}
+#st{margin-left:1rem;color:#2f8a25;font-weight:bold}
+</style></head><body>
+<div id="bar">
+  <div style="margin-bottom:.5rem">제목(네이버에 직접 입력): <b>${title}</b></div>
+  <button id="copy">📋 서식 복사</button><span id="st"></span>
+</div>
+<div id="content">${html}</div>
+<script>
+document.getElementById("copy").onclick = async () => {
+  const el = document.getElementById("content");
+  const st = document.getElementById("st");
+  try {
+    const item = new ClipboardItem({
+      "text/html": new Blob([el.innerHTML], { type: "text/html" }),
+      "text/plain": new Blob([el.innerText], { type: "text/plain" }),
+    });
+    await navigator.clipboard.write([item]);
+  } catch (e) {
+    // 폴백: 본문을 통째로 선택해서 복사 (서식 유지)
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const sel = getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    document.execCommand("copy");
+    sel.removeAllRanges();
+  }
+  st.textContent = "복사됨! 네이버 글쓰기 본문에 Ctrl+V 하세요";
+};
+</script></body></html>`;
+writeFileSync(previewPath, page);
+
 if (process.env.NAVER_PREPARE_ONLY === "1") {
-  console.log("PREPARE_ONLY: " + workPath);
+  console.log("PREPARE_ONLY: " + previewPath);
 } else {
-  spawn("npx", ["-y", "@jjlabsio/mtnb", "preview", workPath], {
-    stdio: "inherit",
-    shell: true,
-  });
+  spawn("cmd.exe", ["/c", "start", "", previewPath], { stdio: "ignore", detached: true });
+  console.log("미리보기를 브라우저로 열었습니다: " + previewPath);
 }
