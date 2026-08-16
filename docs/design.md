@@ -36,8 +36,10 @@
 
 ## 본문 사진 (2026-08-17 확정)
 
-- 글 속 사진은 **왼쪽 플로트 11rem 정사각형**(모바일 8.5rem) — 글이 사진 오른쪽으로
-  흐른다. PostLayout.astro의 `is:global` 스타일. heroImage(`.hero-img`)는 제외.
+- 글 속 사진은 **좌→우→좌 지그재그 플로트 11rem 정사각형**(모바일 8.5rem) — 글이 사진
+  반대쪽으로 흐르고, 사진끼리는 `clear`로 아래로 어긋난다(그림판 스케치 확정, 2026-08-17).
+  PostLayout.astro의 `is:global` 스타일, `p:has(> img)` 등장 순서 교대(6장까지).
+  heroImage(`.hero-img`)는 제외.
 - h2/h3·blockquote·divider에 `clear: both` — 절이 바뀔 때 플로트가 끊긴다.
 - 원본은 넣지 않는다: `tools/prep-image.ps1`로 **1:1 중앙 크롭 + 480px** 재인코딩
   (EXIF 회전 반영). 세로 원본 그대로는 "너무 크고 길다"로 반려된 결정.

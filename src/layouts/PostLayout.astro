@@ -41,15 +41,39 @@ import { Image } from "astro:assets";
     </article>
   </main>
 
-  <!-- 본문 사진: 왼쪽에 작게 띄우고 글이 오른쪽으로 흐른다 (hero 제외, 2026-08-17) -->
+  <!-- 본문 사진: 좌→우→좌 지그재그로 작게 띄우고 글이 반대쪽으로 흐른다 (hero 제외, 2026-08-17) -->
   <style is:global>
     article.prose img:not(.hero-img) {
-      float: left;
       width: 11rem;
       height: 11rem;
       object-fit: cover;
       border-radius: 0.75rem;
+      clear: both; /* 사진끼리는 겹치지 않고 아래로 어긋난다 */
+    }
+    /* 마크다운 사진 문단(p>img)을 등장 순서대로 좌/우 교대 — 6장까지 커버 */
+    article.prose p:has(> img) img {
+      float: left;
       margin: 0.35rem 1.25rem 0.5rem 0;
+    }
+    article.prose p:has(> img) ~ p:has(> img) img {
+      float: right;
+      margin: 0.35rem 0 0.5rem 1.25rem;
+    }
+    article.prose p:has(> img) ~ p:has(> img) ~ p:has(> img) img {
+      float: left;
+      margin: 0.35rem 1.25rem 0.5rem 0;
+    }
+    article.prose p:has(> img) ~ p:has(> img) ~ p:has(> img) ~ p:has(> img) img {
+      float: right;
+      margin: 0.35rem 0 0.5rem 1.25rem;
+    }
+    article.prose p:has(> img) ~ p:has(> img) ~ p:has(> img) ~ p:has(> img) ~ p:has(> img) img {
+      float: left;
+      margin: 0.35rem 1.25rem 0.5rem 0;
+    }
+    article.prose p:has(> img) ~ p:has(> img) ~ p:has(> img) ~ p:has(> img) ~ p:has(> img) ~ p:has(> img) img {
+      float: right;
+      margin: 0.35rem 0 0.5rem 1.25rem;
     }
     article.prose h2,
     article.prose h3,
