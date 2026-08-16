@@ -11,14 +11,16 @@ const last_posts = posts.slice(0, 5);
 
 <BaseLayout sideBarActiveItemID="home">
   <div class="min-h-[78vh] flex flex-col items-center justify-center pb-8">
-    <img
-      src="/turtle-hero.webp"
-      alt="거북이"
-      width="760"
-      height="538"
-      class="w-64 md:w-80 rounded-3xl shadow-lg"
-    />
-    <div class="text-5xl font-bold font-pixel mt-10">김지우입니다</div>
+    <div class="flex flex-col md:flex-row items-center gap-8 md:gap-12">
+      <img
+        src="/turtle-hero.webp"
+        alt="거북이"
+        width="760"
+        height="538"
+        class="w-64 md:w-80"
+      />
+      <div class="text-5xl font-bold font-pixel">김지우입니다</div>
+    </div>
     <div class="mt-16 text-2xl opacity-50 animate-bounce" aria-hidden="true">↓</div>
   </div>
 
