@@ -7,19 +7,19 @@ h1, h2, h3, h4,
     color: #379427;
 }
 
-/* 본문 볼드는 초록 글자 + 연분홍 형광펜 밴드 (diff 하이라이트처럼 칠하는 느낌) */
+/* 본문 볼드는 검정 글자 + 초록 형광펜 (직각 모서리) */
 strong {
-    color: #2f8a25;
-    background: #ffe3e6;
-    padding: 0.05em 0.3em;
-    border-radius: 0.3em;
+    color: #111111;
+    background: #b7ff5e;
+    padding: 0.05em 0.25em;
+    border-radius: 0;
     -webkit-box-decoration-break: clone;
     box-decoration-break: clone;
 }
 
 /* prose(글 본문) 영역은 typography 플러그인 색이 이기므로 명시 오버라이드 */
 .prose strong {
-    color: #2f8a25;
+    color: #111111;
 }
 .prose h1,
 .prose h2,
