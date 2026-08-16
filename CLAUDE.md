@@ -35,6 +35,19 @@ Astrofy 템플릿 기반 (https://github.com/manuelernestog/astrofy, 커밋 9398
 글 초안 작성은 portfolio-agent(`C:\workspace\02-sandbox\portfolio-agent`)의
 `/write-post` 스킬이 담당한다 — 인터뷰→초안→승인→발행 규율이 거기 있다.
 
+## 네이버 블로그 크로스포스팅 (2026-08-17 결정)
+
+발행된 글을 네이버에도 올린다. **완전 자동 발행은 금지** — 네이버 약관 위반 + 봇 탐지 +
+검색 저품질 페널티 (리서치: `C:\projects\00-research\2026-08\w2\2026-08-16-crossposting-naver\`).
+채택 방식은 클립보드 반자동:
+
+1. `npm run naver -- <글-슬러그>` → 마크다운을 네이버 에디터 호환 HTML로 변환해
+   브라우저 미리보기(`@jjlabsio/mtnb`)를 띄운다 (`tools/to-naver.mjs`)
+2. 미리보기의 [서식 복사] 클릭 → 네이버 글쓰기 본문에 Ctrl+V → 제목 입력 → 발행은 사용자가
+3. 이미지·mermaid PNG는 네이버가 핫링크를 막으므로 에디터에 직접 첨부 (스크립트가 목록을 알려준다)
+4. 포맷은 **전문 그대로 + 하단 원문 링크** — 검색엔진 유사문서 리스크(원본이 밀릴 수 있음)를
+   안내받고 사용자가 감수하기로 결정함. 추가 채널(velog 등)은 미연결 — 필요 시 리서치 참조.
+
 ## 템플릿에서 바꾼 것
 
 - 패키지 매니저: pnpm → npm (이 머신에 pnpm 없음, package-lock.json이 정본)

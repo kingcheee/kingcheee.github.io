@@ -21,9 +21,10 @@ pnpm-debug.log*
 # Astro
 .astro/
 
-# 발행 전 초안·리서치 (공개 repo에 올리지 않는다)
+# 발행 전 초안·리서치·네이버 변환 산출물 (공개 repo에 올리지 않는다)
 drafts/
 research/
+naver-out/
 
 # Claude 개인 설정
 CLAUDE.local.md
