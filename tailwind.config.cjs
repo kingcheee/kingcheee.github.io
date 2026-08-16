@@ -5,6 +5,7 @@ module.exports = {
 		extend: {
 			fontFamily: {
 				sans: ['"Pretendard Variable"', 'Pretendard', '-apple-system', 'system-ui', 'Roboto', 'sans-serif'],
+				pixel: ['Mona12', '"Mona12 Text KR"', '"Pretendard Variable"', 'sans-serif'],
 			},
 		},
 	},
@@ -22,9 +23,9 @@ module.exports = {
 					"accent-content": "#14290F",
 					"neutral": "#2B2A20",
 					"neutral-content": "#FAF6E8",
-					"base-100": "#FAF6E8",
-					"base-200": "#F1E9D2",
-					"base-300": "#E5DBB9",
+					"base-100": "#FBF8EE",
+					"base-200": "#F4EDDA",
+					"base-300": "#E7DFC2",
 					"base-content": "#332F1E",
 					"info": "#5CA8D8",
 					"success": "#57A44B",

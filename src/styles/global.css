@@ -1,4 +1,11 @@
-/* 크림 디지털 가든 공통 터치 */
+/* 크림 디지털 가든 + 픽셀 헤딩 공통 터치 */
+
+/* 제목·표시 텍스트는 Mona12 픽셀체, 본문은 Pretendard */
+h1, h2, h3, h4,
+.font-pixel {
+    font-family: "Mona12", "Mona12 Text KR", "Pretendard Variable", Pretendard, sans-serif;
+}
+
 ::selection {
     background: #cde8c4;
 }
