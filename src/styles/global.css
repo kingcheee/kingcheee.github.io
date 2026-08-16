@@ -1,3 +1,8 @@
-.time-line-container>div:last-child .education__time>.education__line {
-    display: none;
+/* 크림 디지털 가든 공통 터치 */
+::selection {
+    background: #cde8c4;
+}
+
+html {
+    scroll-behavior: smooth;
 }
