@@ -41,56 +41,45 @@ import { Image } from "astro:assets";
     </article>
   </main>
 
-  <!-- 본문 사진: 좌→우→좌 지그재그로 작게 띄우고 글이 반대쪽으로 흐른다 (hero 제외, 2026-08-17) -->
+  <!-- 본문 사진: 사진과 글을 한 행으로 묶는다 — 사진 옆엔 항상 글이 있다 (hero 제외, 2026-08-17).
+       마크다운 규칙: 사진과 그 옆에 앉을 글을 같은 문단에 쓴다 — `![...](...)  이어지는 문장...` -->
   <style is:global>
-    article.prose img:not(.hero-img) {
+    article.prose p:has(> img:not(.hero-img)) {
+      display: flex;
+      gap: 1.25rem;
+      align-items: flex-start;
+    }
+    article.prose p:has(> img:not(.hero-img)) img {
       width: 11rem;
       height: 11rem;
       object-fit: cover;
       border-radius: 0.75rem;
-      clear: both; /* 사진끼리는 겹치지 않고 아래로 어긋난다 */
+      flex: 0 0 auto;
+      margin: 0;
     }
-    /* 마크다운 사진 문단(p>img)을 등장 순서대로 좌/우 교대 — 6장까지 커버 */
-    article.prose p:has(> img) img {
-      float: left;
-      margin: 0.35rem 1.25rem 0.5rem 0;
+    /* 등장 순서대로 사진 좌/우 교대 (6장까지) — 홀수번째 사진 왼쪽, 짝수번째 오른쪽 */
+    article.prose p:has(> img) ~ p:has(> img) {
+      flex-direction: row-reverse;
     }
-    article.prose p:has(> img) ~ p:has(> img) img {
-      float: right;
-      margin: 0.35rem 0 0.5rem 1.25rem;
+    article.prose p:has(> img) ~ p:has(> img) ~ p:has(> img) {
+      flex-direction: row;
     }
-    article.prose p:has(> img) ~ p:has(> img) ~ p:has(> img) img {
-      float: left;
-      margin: 0.35rem 1.25rem 0.5rem 0;
+    article.prose p:has(> img) ~ p:has(> img) ~ p:has(> img) ~ p:has(> img) {
+      flex-direction: row-reverse;
     }
-    article.prose p:has(> img) ~ p:has(> img) ~ p:has(> img) ~ p:has(> img) img {
-      float: right;
-      margin: 0.35rem 0 0.5rem 1.25rem;
+    article.prose p:has(> img) ~ p:has(> img) ~ p:has(> img) ~ p:has(> img) ~ p:has(> img) {
+      flex-direction: row;
     }
-    article.prose p:has(> img) ~ p:has(> img) ~ p:has(> img) ~ p:has(> img) ~ p:has(> img) img {
-      float: left;
-      margin: 0.35rem 1.25rem 0.5rem 0;
-    }
-    article.prose p:has(> img) ~ p:has(> img) ~ p:has(> img) ~ p:has(> img) ~ p:has(> img) ~ p:has(> img) img {
-      float: right;
-      margin: 0.35rem 0 0.5rem 1.25rem;
-    }
-    article.prose h2,
-    article.prose h3,
-    article.prose blockquote,
-    article.prose .divider {
-      clear: both;
-    }
-    article.prose::after {
-      content: "";
-      display: block;
-      clear: both;
+    article.prose p:has(> img) ~ p:has(> img) ~ p:has(> img) ~ p:has(> img) ~ p:has(> img) ~ p:has(> img) {
+      flex-direction: row-reverse;
     }
     @media (max-width: 640px) {
-      article.prose img:not(.hero-img) {
+      article.prose p:has(> img:not(.hero-img)) {
+        gap: 1rem;
+      }
+      article.prose p:has(> img:not(.hero-img)) img {
         width: 8.5rem;
         height: 8.5rem;
-        margin-right: 1rem;
       }
     }
   </style>
