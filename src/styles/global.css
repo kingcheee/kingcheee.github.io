@@ -10,6 +10,14 @@ h1, h2, h3, h4,
     background: #cde8c4;
 }
 
+/* Mermaid 다이어그램: 가운데 정렬, 코드블록 배경 제거 */
+.mermaid {
+    display: flex;
+    justify-content: center;
+    background: transparent;
+    padding: 0;
+}
+
 html {
     scroll-behavior: smooth;
 }

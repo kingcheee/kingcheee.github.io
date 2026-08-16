@@ -25,6 +25,13 @@ Astrofy 템플릿 기반 (https://github.com/manuelernestog/astrofy, 커밋 9398
 4. frontmatter 스키마는 `src/content/config.ts` (title, description, pubDate 필수)
 5. `npm run build` 통과 확인 후 commit + push
 
+## 글 안에 이미지·다이어그램
+
+- **이미지**: 파일을 `public/images/<글-슬러그>/`에 넣고 본문에서
+  `![설명](/images/<글-슬러그>/파일명.png)`. 대표 이미지는 frontmatter `heroImage`.
+- **다이어그램**: 본문에 ` ```mermaid ` 코드블록을 쓰면 브라우저에서 렌더링된다
+  (PostLayout의 인라인 스크립트가 CDN mermaid@11을 블록이 있을 때만 로드. 2026-08-16 실측)
+
 글 초안 작성은 portfolio-agent(`C:\workspace\02-sandbox\portfolio-agent`)의
 `/write-post` 스킬이 담당한다 — 인터뷰→초안→승인→발행 규율이 거기 있다.
 
