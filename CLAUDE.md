@@ -42,9 +42,8 @@ Astrofy 템플릿 기반 (https://github.com/manuelernestog/astrofy, 커밋 9398
   `astro:build:done`에서 깨진다. astro를 5로 올리기 전에는 sitemap을 올리지 마라
 - `rss.xml.js`의 핸들러 `get` → `GET` (Astro 4에서 소문자 제거됨)
 - 데모 콘텐츠(post1~3, store, services, cv, projects)와 저자 프로필·소셜 링크 제거
-- 팔레트는 화이트 + 쨍한 초록(거북이 프로필 기준, `tailwind.config.cjs`의 turtle 테마).
-  제목·픽셀 글자·본문 볼드는 초록 — prose 영역은 `global.css`의 `.prose` 오버라이드가 담당
-  (typography 플러그인 색이 일반 선택자를 이기므로 지우면 안 된다. 2026-08-16 실측)
+- **디자인 시스템 전문은 `docs/design.md`** — 팔레트·폰트·구조·수정 시 주의점.
+  디자인을 바꾸면 그 파일도 갱신한다
 
 ## 공백
 
