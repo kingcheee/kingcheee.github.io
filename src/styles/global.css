@@ -7,15 +7,18 @@ h1, h2, h3, h4,
     color: #379427;
 }
 
-/* 본문 볼드는 검정 글자 + 차분한 초록 밴드 (직각 모서리).
+/* 본문 볼드는 검정 글자 + 연한 빨강 밴드 (직각 모서리).
    inline-block: 볼드가 줄 중간에서 잘리지 않고 통째로 다음 줄로 내려간다
-   (줄 폭보다 긴 볼드만 내부 줄바꿈 — 그때를 위해 clone 유지) */
+   (줄 폭보다 긴 볼드만 내부 줄바꿈 — 그때를 위해 clone 유지).
+   line-height 축소: inline-block은 밴드 높이가 줄 높이를 따라가므로,
+   낮춰 주지 않으면 밴드가 두꺼워진다 (실측 반려) */
 strong {
     color: #111111;
-    background: #c5e8ae;
-    padding: 0.05em 0.25em;
+    background: #f6c8c8;
+    padding: 0 0.25em;
     border-radius: 0;
     display: inline-block;
+    line-height: 1.25;
     -webkit-box-decoration-break: clone;
     box-decoration-break: clone;
 }
