@@ -48,6 +48,9 @@
 - h2/h3·blockquote·divider에 `clear: both` — 절이 바뀔 때 플로트가 끊긴다.
 - 원본은 넣지 않는다: `tools/prep-image.ps1`로 **1:1 중앙 크롭 + 480px** 재인코딩
   (EXIF 회전 반영). 세로 원본 그대로는 "너무 크고 길다"로 반려된 결정.
+- **모든 사진은 1:1 — heroImage도 예외 없다** (2026-08-17 사용자 확정. 세이프티 가디언
+  회고 hero를 2.5:1 → 1:1로 교체). 가로로 긴 원본(발표 슬라이드 등)은 중앙 크롭하면
+  내용이 잘리므로, 원본 배경 단색을 딴 정사각 캔버스에 내용 블록을 세로 중앙으로 앉힌다.
 
 ## 구조
 
@@ -58,6 +61,24 @@
   직각·그림자 없음), 묶음은 `-translate-y-16`으로 살짝 위. 하단 고정 ↓ 화살표.
   **최근 글은 스크롤해야 보인다** — 첫 화면에 글이 비치면 안 된다.
 - **글 목록 카드** (HorizontalCard): `bg-white ring-1 ring-base-300`, 호버 시 `ring-accent`.
+
+## 글 목차 TOC (2026-08-17)
+
+- `src/components/TableOfContents.astro` — 글 페이지 본문 오른쪽 옆자리 카드. `[slug].astro`가
+  `entry.render()`의 `headings`를 PostLayout 경유로 넘긴다. h2·h3만, 2개 미만이면 안 뜬다.
+- 배치: **main 플렉스 안에서 본문 옆에 앉는다** (`w-52 shrink-0` + `sticky top-24`) — fixed가
+  아니라서 본문이 살짝 왼쪽으로 밀리며 목차 자리가 자연스럽게 생긴다 (2026-08-17 사용자 요청).
+  **xl(1280px) 이상에서만 표시.** 카드 스타일은 글 목록 카드와 동일(bg-white ring-base-300).
+- 카드 머리글은 "목차"가 아니라 **글 제목**(픽셀 폰트) — 2026-08-17 사용자 요청.
+- 현재 절 하이라이트: `.toc-active` = primary 초록 + secondary 연초록 칩.
+  IntersectionObserver는 트리거로만 쓰고 활성 절은 기하로 재계산한다(콜백 순서 무관).
+- 클릭은 preventDefault + `scrollIntoView(smooth)` + `history.replaceState` — 주소에 같은
+  해시가 있어도 항상 이동한다. **클릭 순간 즉시 칠하지 않는다** — 잠깐 연두색이 번쩍이는 게
+  부자연스럽다고 반려됨(2026-08-17). 하이라이트는 스크롤을 따라서만 움직인다.
+  앵커 가림 방지는 h2/h3의 `scroll-margin-top: 5.5rem`.
+- **실측 함정: 크롬 탭이 가려져 있으면(visibility: hidden) rAF·IO·scroll 이벤트·smooth
+  스크롤이 전부 멈춘다.** 자동화(스크린샷)로 TOC 동작을 검증하려면 크롬 창을 앞에 띄워야
+  한다 — 안 그러면 하이라이트가 "고장난 것처럼" 보인다.
 
 ## 수정할 때 주의 (실측)
 
