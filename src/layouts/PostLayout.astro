@@ -93,7 +93,56 @@ import { Image } from "astro:assets";
         height: 8.5rem;
       }
     }
+    /* 라이트박스 — 본문 이미지를 클릭하면 원본 크기로 (2026-08-17) */
+    article.prose img {
+      cursor: zoom-in;
+    }
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      background: rgba(0, 0, 0, 0.78);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      cursor: zoom-out;
+    }
+    .lightbox img {
+      max-width: min(92vw, 960px);
+      max-height: 88vh;
+      border-radius: 0.75rem;
+    }
   </style>
+
+  <!-- 라이트박스: 이미지 클릭 → 오버레이에 원본 크기(자연 크기 이상으로 키우지 않는다), 클릭/Esc로 닫기 -->
+  <script is:inline data-astro-rerun>
+    function initLightbox() {
+      document.querySelectorAll("article.prose img:not([data-lightbox])").forEach((img) => {
+        img.dataset.lightbox = "1";
+        img.addEventListener("click", () => {
+          const overlay = document.createElement("div");
+          overlay.className = "lightbox";
+          const big = document.createElement("img");
+          big.src = img.src;
+          big.alt = img.alt;
+          overlay.appendChild(big);
+          const close = () => {
+            overlay.remove();
+            document.removeEventListener("keydown", onKey);
+          };
+          const onKey = (e) => {
+            if (e.key === "Escape") close();
+          };
+          overlay.addEventListener("click", close);
+          document.addEventListener("keydown", onKey);
+          document.body.appendChild(overlay);
+        });
+      });
+    }
+    initLightbox();
+    document.addEventListener("astro:page-load", initLightbox);
+  </script>
 
   <!-- ```mermaid 코드블록을 브라우저에서 다이어그램으로 렌더링 (CDN, 블록 있을 때만 로드) -->
   <script is:inline type="module" data-astro-rerun>
