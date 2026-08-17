@@ -29,5 +29,5 @@ const { activeItemID } = Astro.props;
 
 <script define:vars={{ activeItemID }}>
 const el = activeItemID && document.getElementById(activeItemID);
-el && el.classList.add("text-primary", "font-bold");
+el && el.classList.add("text-primary");
 </script>
