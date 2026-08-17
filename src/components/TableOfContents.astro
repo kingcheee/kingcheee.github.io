@@ -1,0 +1,111 @@
+---
+// 글 페이지 오른쪽 고정 목차 — 넓은 화면(xl 이상)에서만 보인다 (2026-08-17)
+// headings는 [slug].astro에서 entry.render()가 주는 것을 그대로 받는다
+interface Heading {
+  depth: number;
+  slug: string;
+  text: string;
+}
+interface Props {
+  headings?: Heading[];
+  title?: string;
+}
+const { headings = [], title = "목차" } = Astro.props;
+const items = headings.filter((h) => h.depth === 2 || h.depth === 3);
+const show = items.length >= 2;
+---
+
+{
+  show && (
+    <aside class="hidden xl:block w-52 shrink-0" aria-label="목차">
+      {/* 레이아웃 박스는 w-52 고정(본문 위치 불변) — 카드만 translate로 우·하 이동 + w-60으로 확폭 (2026-08-17) */}
+      <nav class="sticky top-24 w-60 translate-x-12 translate-y-20 bg-white ring-1 ring-base-300 rounded-xl p-5 max-h-[70vh] overflow-y-auto">
+        <div class="font-pixel text-base mb-3">{title}</div>
+        <ul class="space-y-1 text-sm list-none m-0 p-0">
+          {items.map((h) => (
+            <li class={h.depth === 3 ? "pl-3" : ""}>
+              <a data-toc-link href={`#${h.slug}`} class="toc-link block px-2 py-1 rounded-lg no-underline">
+                {h.text}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </aside>
+  )
+}
+
+<style is:global>
+  html {
+    scroll-behavior: smooth;
+  }
+  /* 상단 고정 바(4rem)에 제목이 가리지 않게 앵커 이동 오프셋 */
+  article.prose h2,
+  article.prose h3 {
+    scroll-margin-top: 5.5rem;
+  }
+  .toc-link {
+    color: #23281e;
+    opacity: 0.7;
+  }
+  .toc-link:hover {
+    opacity: 1;
+  }
+  /* 현재 보고 있는 절 — 초록 볼드 + 연초록 칩 (팔레트: docs/design.md) */
+  .toc-link.toc-active {
+    color: #2f8a25;
+    background: #eaf6e4;
+    font-weight: 700;
+    opacity: 1;
+  }
+</style>
+
+<script is:inline data-astro-rerun>
+  (function () {
+    const links = Array.from(document.querySelectorAll("[data-toc-link]"));
+    if (!links.length || links[0].dataset.tocBound) return;
+    const idOf = (a) => decodeURIComponent(a.getAttribute("href").slice(1));
+    const headings = links.map((a) => document.getElementById(idOf(a))).filter(Boolean);
+    const setActive = (id) => links.forEach((a) => a.classList.toggle("toc-active", idOf(a) === id));
+
+    // 현재 절 추적 — IO는 "제목이 기준선을 지났다"는 트리거로만 쓰고,
+    // 활성 절은 매번 기하로 다시 계산한다 (콜백 배치 순서에 안 흔들린다)
+    const update = () => {
+      let current = headings.length ? headings[0].id : null;
+      for (const h of headings) {
+        if (h.getBoundingClientRect().top <= 140) current = h.id;
+      }
+      if (current) setActive(current);
+    };
+    const io = new IntersectionObserver(update, { rootMargin: "-72px 0px -80% 0px" });
+    headings.forEach((h) => io.observe(h));
+
+    // 클릭은 직접 처리 — 같은 해시를 다시 눌러도 항상 이동한다
+    links.forEach((a) => {
+      a.dataset.tocBound = "1";
+      a.addEventListener("click", (ev) => {
+        const el = document.getElementById(idOf(a));
+        if (!el) return;
+        ev.preventDefault();
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        history.replaceState(null, "", a.getAttribute("href"));
+        // 클릭 즉시 칠하지 않는다 — 하이라이트는 스크롤을 따라온다 (2026-08-17 사용자 피드백)
+      });
+    });
+
+    // 해시 달고 들어온 경우: 폰트·이미지 로드로 레이아웃이 밀려 착지가 어긋난다 → 로드 완료 후 재정렬
+    if (location.hash) {
+      const target = document.getElementById(decodeURIComponent(location.hash.slice(1)));
+      if (target) {
+        setActive(target.id);
+        window.addEventListener(
+          "load",
+          () => target.scrollIntoView({ behavior: "instant", block: "start" }),
+          { once: true }
+        );
+      }
+    } else if (headings.length) {
+      setActive(headings[0].id);
+    }
+  })();
+</script>
