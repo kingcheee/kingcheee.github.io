@@ -5,14 +5,21 @@ import { getCollection } from "astro:content";
 import createSlug from "../../lib/createSlug";
 
 // 글 갈래 셋. 기본은 회고고, 탭을 누르면 좌우로 미끄러진다.
-const CATEGORIES = ["회고", "일기", "생각"];
+// 탭은 버튼이 아니라 링크다 — 스크립트가 죽거나 차단당해도(Brave 실드 등) 클릭이
+// 태그 페이지로 넘어가서 최소한 목록은 보인다. JS가 살아 있으면 preventDefault 로
+// 가로채 슬라이드한다.
+const CATEGORIES = [
+  { name: "회고", href: "/blog/" },
+  { name: "일기", href: "/blog/tag/일기/" },
+  { name: "생각", href: "/blog/tag/생각/" },
+];
 
 const posts = await getCollection("blog");
 posts.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
 
-const groups = CATEGORIES.map((name) => ({
-  name,
-  posts: posts.filter((post) => post.data.tags?.includes(name)),
+const groups = CATEGORIES.map((cat) => ({
+  name: cat.name,
+  posts: posts.filter((post) => post.data.tags?.includes(cat.name)),
 }));
 ---
 
@@ -27,16 +34,16 @@ const groups = CATEGORIES.map((name) => ({
     class="relative grid grid-cols-3 font-pixel text-base border-b border-base-300 mb-6"
   >
     {
-      CATEGORIES.map((name, i) => (
-        <button
-          type="button"
+      CATEGORIES.map((cat, i) => (
+        <a
           role="tab"
+          href={cat.href}
           class="cat-tab py-3 text-center transition-colors"
           data-index={i}
           aria-selected={i === 0 ? "true" : "false"}
         >
-          {name}
-        </button>
+          {cat.name}
+        </a>
       ))
     }
     <span id="cat-underline"></span>
@@ -105,6 +112,11 @@ const groups = CATEGORIES.map((name) => ({
     transition: transform 0.3s ease-out;
   }
 
+  .cat-tab {
+    cursor: pointer;
+    text-decoration: none;
+  }
+
   .cat-panel {
     width: 100%;
     flex: 0 0 100%;
@@ -148,7 +160,14 @@ const groups = CATEGORIES.map((name) => ({
       if (writeHash) history.replaceState(null, "", "#" + NAMES[index]);
     };
 
-    tabs.forEach((tab, i) => tab.addEventListener("click", () => go(i, true)));
+    // 링크를 가로챈다. 여기까지 왔다는 건 스크립트가 살아 있다는 뜻이므로 슬라이드로
+    // 처리하고 이동을 막는다. 스크립트가 죽으면 이 줄이 안 붙어서 그냥 링크로 넘어간다.
+    tabs.forEach((tab, i) =>
+      tab.addEventListener("click", (e) => {
+        e.preventDefault();
+        go(i, true);
+      })
+    );
 
     // 이미지가 늦게 뜨면 패널 높이가 바뀐다 — 활성 패널을 계속 따라간다
     if ("ResizeObserver" in window) {
