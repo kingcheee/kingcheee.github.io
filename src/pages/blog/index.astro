@@ -1,0 +1,180 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import HorizontalCard from "../../components/HorizontalCard.astro";
+import { getCollection } from "astro:content";
+import createSlug from "../../lib/createSlug";
+
+// 글 갈래 셋. 기본은 회고고, 탭을 누르면 좌우로 미끄러진다.
+const CATEGORIES = ["회고", "일기", "생각"];
+
+const posts = await getCollection("blog");
+posts.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+
+const groups = CATEGORIES.map((name) => ({
+  name,
+  posts: posts.filter((post) => post.data.tags?.includes(name)),
+}));
+---
+
+<BaseLayout title="Blog" sideBarActiveItemID="blog">
+  <div class="mb-5">
+    <div class="text-3xl w-full font-bold font-pixel">Blog</div>
+  </div>
+
+  <div
+    id="cat-tabs"
+    role="tablist"
+    class="relative grid grid-cols-3 font-pixel text-base border-b border-base-300 mb-6"
+  >
+    {
+      CATEGORIES.map((name, i) => (
+        <button
+          type="button"
+          role="tab"
+          class="cat-tab py-3 text-center transition-colors"
+          data-index={i}
+          aria-selected={i === 0 ? "true" : "false"}
+        >
+          {name}
+        </button>
+      ))
+    }
+    <span id="cat-underline"></span>
+  </div>
+
+  <div id="cat-viewport">
+    <div id="cat-track">
+      {
+        groups.map((group) => (
+          <section class="cat-panel" aria-label={group.name}>
+            {group.posts.length === 0 ? (
+              <div class="bg-base-200 border-l-4 border-secondary w-full p-4">
+                <p>아직 이 갈래에 쓴 글이 없다.</p>
+              </div>
+            ) : (
+              <ul>
+                {group.posts.map((post) => (
+                  <>
+                    <HorizontalCard
+                      title={post.data.title}
+                      img={post.data.heroImage}
+                      desc={post.data.description}
+                      url={"/blog/" + createSlug(post.data.title, post.slug)}
+                      target="_self"
+                      badge={post.data.badge}
+                      tags={post.data.tags}
+                    />
+                    <div class="divider my-0" />
+                  </>
+                ))}
+              </ul>
+            )}
+          </section>
+        ))
+      }
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  /* 연두 — 팔레트의 accent(#55B93E)보다 한 톤 밝고 노란 쪽 */
+  #cat-underline {
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 33.3333%;
+    height: 3px;
+    border-radius: 999px;
+    background: #86d14f;
+    transition: transform 0.3s ease-out;
+  }
+
+  #cat-viewport {
+    overflow: hidden;
+    transition: height 0.3s ease-out;
+  }
+
+  #cat-track {
+    display: flex;
+    transition: transform 0.3s ease-out;
+  }
+
+  .cat-panel {
+    width: 100%;
+    flex: 0 0 100%;
+    /* 카드의 hover 그림자가 옆 패널로 잘리지 않게 살짝 여유를 준다 */
+    padding: 2px;
+  }
+</style>
+
+<noscript>
+  <style>
+    /* JS가 없으면 세 갈래를 그냥 세로로 다 보여준다 */
+    #cat-viewport { height: auto !important; overflow: visible; }
+    #cat-track { display: block; }
+  </style>
+</noscript>
+
+<script>
+  const NAMES = ["회고", "일기", "생각"];
+  const tabs = Array.from(document.querySelectorAll<HTMLElement>(".cat-tab"));
+  const panels = Array.from(document.querySelectorAll<HTMLElement>(".cat-panel"));
+  const track = document.getElementById("cat-track");
+  const viewport = document.getElementById("cat-viewport");
+  const underline = document.getElementById("cat-underline");
+
+  if (track && viewport && underline && tabs.length) {
+    let index = 0;
+
+    const fitHeight = () => {
+      viewport.style.height = panels[index].offsetHeight + "px";
+    };
+
+    const go = (next: number, writeHash: boolean) => {
+      index = Math.min(Math.max(next, 0), panels.length - 1);
+      track.style.transform = `translateX(-${index * 100}%)`;
+      underline.style.transform = `translateX(${index * 100}%)`;
+      tabs.forEach((tab, i) => {
+        tab.classList.toggle("text-primary", i === index);
+        tab.setAttribute("aria-selected", i === index ? "true" : "false");
+      });
+      fitHeight();
+      if (writeHash) history.replaceState(null, "", "#" + NAMES[index]);
+    };
+
+    tabs.forEach((tab, i) => tab.addEventListener("click", () => go(i, true)));
+
+    // 이미지가 늦게 뜨면 패널 높이가 바뀐다 — 활성 패널을 계속 따라간다
+    if ("ResizeObserver" in window) {
+      const ro = new ResizeObserver(() => fitHeight());
+      panels.forEach((panel) => ro.observe(panel));
+    }
+    window.addEventListener("resize", fitHeight);
+
+    // 터치 스와이프
+    let startX = 0;
+    let startY = 0;
+    viewport.addEventListener(
+      "touchstart",
+      (e) => {
+        startX = e.changedTouches[0].clientX;
+        startY = e.changedTouches[0].clientY;
+      },
+      { passive: true }
+    );
+    viewport.addEventListener(
+      "touchend",
+      (e) => {
+        const dx = e.changedTouches[0].clientX - startX;
+        const dy = e.changedTouches[0].clientY - startY;
+        if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) {
+          go(index + (dx < 0 ? 1 : -1), true);
+        }
+      },
+      { passive: true }
+    );
+
+    const fromHash = NAMES.indexOf(decodeURIComponent(location.hash.slice(1)));
+    go(fromHash >= 0 ? fromHash : 0, false);
+  }
+</script>
