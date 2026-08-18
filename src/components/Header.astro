@@ -5,25 +5,40 @@ const { activeItemID } = Astro.props;
 <header
   class="sticky top-0 z-30 w-full bg-base-100/90 backdrop-blur border-b border-base-300"
 >
-  <div class="navbar mx-auto max-w-[900px] px-4 min-h-[4rem]">
-    <div class="navbar-start">
-      <a href="/" class="flex items-center gap-3">
-        <img src="/profile.webp" width="36" height="36" class="w-9 h-9 rounded-full" alt="프로필" />
-        <span class="text-lg font-bold font-pixel">김지우 🐢</span>
-      </a>
-    </div>
-    <div class="navbar-end">
-      <ul class="menu menu-horizontal font-pixel gap-1 px-0">
-        <li><a id="home" href="/">Home</a></li>
-        <li><a id="blog" href="/blog/">Blog</a></li>
+  <!-- navbar-start/end(각 50% 고정) 대신 flex justify-between —
+       50% 반쪽에 갇히면 좁은 화면에서 메뉴가 두 줄로 접힌다 (2026-08-18 모바일 실측) -->
+  <div
+    class="mx-auto flex max-w-[900px] items-center justify-between gap-2 px-4 min-h-[3.5rem] sm:min-h-[4rem]"
+  >
+    <a href="/" class="flex min-w-0 items-center gap-2 sm:gap-3">
+      <img
+        src="/profile.webp"
+        width="36"
+        height="36"
+        class="w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded-full"
+        alt="프로필"
+      />
+      <span class="truncate text-base sm:text-lg font-bold font-pixel">김지우 🐢</span>
+    </a>
+    <nav class="shrink-0">
+      <ul
+        class="menu menu-horizontal flex-nowrap font-pixel px-0 gap-0 sm:gap-1 text-sm sm:text-base"
+      >
+        <li>
+          <a id="home" href="/" class="px-2 sm:px-4 whitespace-nowrap">Home</a>
+        </li>
+        <li>
+          <a id="blog" href="/blog/" class="px-2 sm:px-4 whitespace-nowrap">Blog</a>
+        </li>
         <li>
           <a
             href="mailto:kingcheee1101@gmail.com"
+            class="px-2 sm:px-4 whitespace-nowrap"
             referrerpolicy="no-referrer-when-downgrade">Contact</a
           >
         </li>
       </ul>
-    </div>
+    </nav>
   </div>
 </header>
 

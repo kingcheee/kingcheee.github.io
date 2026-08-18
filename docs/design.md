@@ -71,6 +71,13 @@
 - **상단 스티키 바** (Header.astro): 좌측 프로필 원형 + "김지우 🐢" 픽셀 로고,
   우측 Home/Blog/Contact. 활성 항목은 `text-primary font-bold` (activeItemID 스크립트).
   사이드바는 삭제했다 (드로어 레이아웃 → 상단 바로 전환).
+  **좁은 화면에서 한 줄을 유지한다** (2026-08-18 모바일 실측 수정). daisyUI
+  `navbar-start`/`navbar-end`는 각각 폭 50% 고정이라 360px에서 메뉴가 Home·Blog / Contact
+  두 줄로 접혔다 — `flex justify-between`으로 바꿔 폭을 내용에 맡기고, `ul`에 `flex-nowrap`,
+  각 링크에 `whitespace-nowrap`을 걸어 줄바꿈 자체를 막았다. 모바일에서는 한 단계 작게
+  (아바타 `w-8`, 로고 `text-base`, 메뉴 `text-sm` + 링크 좌우 여백 `px-2`, 바 높이 `3.5rem`),
+  `sm`(640px) 이상에서 원래 크기로 복귀한다. 로고 텍스트는 `min-w-0 truncate` — 폭이 더
+  모자라면 메뉴가 밀려나는 대신 이름이 줄어든다. 실측: 320~412px 전부 한 줄, 가로 스크롤 없음.
 - **홈 히어로**: 첫 화면 풀뷰(`min-h-[calc(100vh-4rem)]`), "김지우입니다"(좌) + 거북이 사진(우,
   직각·그림자 없음), 묶음은 `-translate-y-16`으로 살짝 위. 하단 고정 ↓ 화살표.
   **최근 글은 스크롤해야 보인다** — 첫 화면에 글이 비치면 안 된다.
