@@ -32,9 +32,23 @@ if (fm) {
   md = md.slice(fm[0].length);
 }
 
+// 소스의 소프트 줄바꿈을 문단 단위로 합친다 — 사이트는 줄바꿈이 공백으로 흡수돼 자연
+// 줄바꿈되는데, 네이버 변환은 줄=문단이라 모바일에서 문장 중간이 꺾인다 (2026-08-17 실측)
+md = md
+  .split(/\n{2,}/)
+  .map((block) => {
+    const first = block.trimStart();
+    if (/^(#{1,6}\s|>|[-*]\s|\d+\.\s|!\[|```|---|\|)/.test(first)) return block;
+    return block.replace(/\s*\n\s*/g, " ");
+  })
+  .join("\n\n");
+
 // 사이트 상대경로 이미지를 절대 URL로 (미리보기 표시용 — 네이버는 핫링크를 막으므로 실제로는 직접 첨부)
 const localImages = [...md.matchAll(/!\[[^\]]*\]\((\/[^)]+)\)/g)].map((m) => m[1]);
 md = md.replace(/(!\[[^\]]*\]\()(\/[^)]+)(\))/g, `$1${SITE}$2$3`);
+
+// 본문 텍스트 링크·video src의 사이트 상대경로도 절대 URL로 (네이버에선 상대경로가 깨진다)
+md = md.replace(/(\]\()(\/(?!\/))/g, `$1${SITE}/`).replace(/(src=")(\/(?!\/))/g, `$1${SITE}/`);
 
 // 하단 원문 링크
 md += `\n\n---\n\n원문: ${SITE}/blog/${slug}/\n`;
@@ -64,7 +78,16 @@ console.log("아래 미리보기에서 [서식 복사] → 네이버 본문에 C
 console.log("========================================\n");
 
 // 네이버 에디터 호환 HTML로 변환해 [서식 복사] 버튼이 달린 미리보기 페이지를 만든다
-const { html } = convert(readFileSync(workPath, "utf8"));
+let { html } = convert(readFileSync(workPath, "utf8"));
+
+// 사이트 스타일 주입 (2026-08-17 실측): 볼드 형광펜 #FAD9D9 · 헤딩 연두 #5CAE32
+// (헤딩은 사이트 #379427보다 살짝 연두로 — 2026-08-17 사용자 지시)
+// SmartEditor는 paste에서 color/background-color 인라인 스타일을 보존한다
+html = html
+  .replace(/<(strong|b)\b([^>]*?)(\sstyle="([^"]*)")?>/g, (m, tag, attrs, styleAttr, style) =>
+    `<${tag}${attrs} style="${style ? style + " " : ""}background-color: #FAD9D9;">`)
+  .replace(/<h([1-4])\b([^>]*?)(\sstyle="([^"]*)")?>/g, (m, lv, attrs, styleAttr, style) =>
+    `<h${lv}${attrs} style="${style ? style + " " : ""}color: #5CAE32;">`);
 const previewPath = path.resolve("naver-out", slug + ".html");
 const page = `<!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><title>네이버 서식 복사 — ${title}</title>
