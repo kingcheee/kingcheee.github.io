@@ -31,7 +31,7 @@ const groups = CATEGORIES.map((cat) => ({
   <div
     id="cat-tabs"
     role="tablist"
-    class="relative grid grid-cols-3 font-pixel text-base border-b border-base-300 mb-6"
+    class="relative grid grid-cols-3 font-pixel text-base border-b border-base-300 mb-2"
   >
     {
       CATEGORIES.map((cat, i) => (
@@ -49,7 +49,8 @@ const groups = CATEGORIES.map((cat) => ({
     <span id="cat-underline"></span>
   </div>
 
-  <div class="-mt-4 mb-4 text-right">
+  {/* 음수 마진을 쓰지 않는다 — 탭 바 위로 겹쳐서 탭 아랫부분 클릭을 먹었다 (2026-08-18) */}
+  <div class="mb-4 text-right">
     <a href="/blog/all/" class="text-sm opacity-70 hover:opacity-100 hover:text-primary">
       전체 글 보기 →
     </a>
