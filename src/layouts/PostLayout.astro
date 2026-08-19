@@ -68,6 +68,13 @@ import { Image } from "astro:assets";
       flex: 0 0 auto;
       margin: 0;
     }
+    /* 코드 스니펫만 1:1 크롭에서 면제 — 원본 비율 그대로 (2026-08-20 사용자 지시).
+       파일명이 code-*.jpg 인 이미지가 코드 스니펫이다. 사진은 지금까지대로 1:1. */
+    article.prose p:has(> img:not(.hero-img)) img[src*="/code-"] {
+      width: 20rem;
+      height: auto;
+      object-fit: contain;
+    }
     /* 등장 순서대로 사진 좌/우 교대 (6장까지) — 홀수번째 사진 왼쪽, 짝수번째 오른쪽 */
     article.prose p:has(> img) ~ p:has(> img) {
       flex-direction: row-reverse;
@@ -91,6 +98,10 @@ import { Image } from "astro:assets";
       article.prose p:has(> img:not(.hero-img)) img {
         width: 8.5rem;
         height: 8.5rem;
+      }
+      article.prose p:has(> img:not(.hero-img)) img[src*="/code-"] {
+        width: 11rem;
+        height: auto;
       }
     }
     /* 라이트박스 — 본문 이미지를 클릭하면 원본 크기로 (2026-08-17) */
