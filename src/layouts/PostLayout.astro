@@ -68,12 +68,26 @@ import { Image } from "astro:assets";
       flex: 0 0 auto;
       margin: 0;
     }
-    /* 코드 스니펫만 1:1 크롭에서 면제 — 원본 비율 그대로 (2026-08-20 사용자 지시).
-       파일명이 code-*.jpg 인 이미지가 코드 스니펫이다. 사진은 지금까지대로 1:1. */
-    article.prose p:has(> img:not(.hero-img)) img[src*="/code-"] {
-      width: 20rem;
+    /* 1:1이 아닌 이미지(코드 스니펫 code-*, 가로형 사진 wide-*)는 크롭도 축소도 하지
+       않는다 — 옆에 글을 붙이지 않고 본문 폭 전체를 쓰고, 글은 그 아래로 내린다.
+       (2026-08-20 사용자 지시: "1대1이 아닌 코드베이스나 사진들은 사이즈 확대하자".
+       11rem 썸네일로는 모바일에서 코드가 아예 안 읽혔다.) 사진은 지금까지대로 1:1. */
+    article.prose p:has(> img[src*="/code-"]),
+    article.prose p:has(> img[src*="/wide-"]) {
+      display: block;
+    }
+    /* :not(.hero-img)는 장식이 아니라 특정도용이다 — 이게 없으면 뒤에 오는
+       @media(max-width:640px)의 8.5rem 정사각 규칙과 특정도가 같아져 모바일에서 진다. */
+    article.prose p:has(> img[src*="/code-"]) img:not(.hero-img),
+    article.prose p:has(> img[src*="/wide-"]) img:not(.hero-img) {
+      width: 100%;
       height: auto;
       object-fit: contain;
+      margin: 0 0 0.75rem;
+    }
+    article.prose p:has(> img[src*="/code-"]) span,
+    article.prose p:has(> img[src*="/wide-"]) span {
+      display: block;
     }
     /* 등장 순서대로 사진 좌/우 교대 (6장까지) — 홀수번째 사진 왼쪽, 짝수번째 오른쪽 */
     article.prose p:has(> img) ~ p:has(> img) {
@@ -99,10 +113,7 @@ import { Image } from "astro:assets";
         width: 8.5rem;
         height: 8.5rem;
       }
-      article.prose p:has(> img:not(.hero-img)) img[src*="/code-"] {
-        width: 11rem;
-        height: auto;
-      }
+      /* 모바일에서도 전폭 — 위 규칙이 그대로 적용된다. 따로 줄이지 않는다. */
     }
     /* 라이트박스 — 본문 이미지를 클릭하면 원본 크기로 (2026-08-17) */
     article.prose img {
