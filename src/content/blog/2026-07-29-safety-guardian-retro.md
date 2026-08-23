@@ -1,5 +1,5 @@
 ---
-title: "세이프티 가디언 — 중간 프로젝트 회고"
+title: "[중간 프로젝트] LangGraph로 만든 중대재해처벌법 문서 점검 에이전트, 세이프티 가디언"
 description: "2주 만에 만든 중대재해처벌법 에이전트, 전화 200통"
 pubDate: 2026-07-29
 heroImage: "/images/2026-07-29-safety-guardian-retro/hero.jpg"

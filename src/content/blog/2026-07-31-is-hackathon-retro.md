@@ -1,5 +1,5 @@
 ---
-title: "그냥 잘 안 맞았다"
+title: "[해커톤] Claude Vision + MediaPipe로 배꽃 인공수분 데이터 수집기 만들기 — 호남IS해커톤"
 description: "졌는데 엄청 필요했던 경험이었다."
 pubDate: 2026-07-31
 tags: ["회고", "해커톤"]
