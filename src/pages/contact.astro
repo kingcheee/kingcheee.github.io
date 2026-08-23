@@ -1,0 +1,79 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+const EMAIL = "turtle.jiwoo@gmail.com";
+const CHANNELS = [
+  {
+    name: "GitHub",
+    label: "github.com/kingcheee",
+    desc: "코드와 커밋",
+    url: "https://github.com/kingcheee",
+  },
+  {
+    name: "네이버 블로그",
+    label: "blog.naver.com/turtle-jiwoo",
+    desc: "여기 글의 크로스포스팅",
+    url: "https://blog.naver.com/turtle-jiwoo",
+  },
+];
+---
+
+<BaseLayout title="Contact" sideBarActiveItemID="contact">
+  <div class="mb-5">
+    <div class="text-3xl w-full font-bold font-pixel">Contact</div>
+  </div>
+
+  <div class="flex flex-col gap-4">
+    <div class="rounded-2xl bg-base-200 p-5">
+      <div class="font-pixel font-bold mb-2">Email</div>
+      <div class="flex flex-wrap items-center gap-3">
+        <span id="email-text" class="font-mono text-sm sm:text-base">{EMAIL}</span>
+        <div class="flex gap-2">
+          <button id="email-copy" class="btn btn-sm btn-primary">복사</button>
+          <a href={`mailto:${EMAIL}`} class="btn btn-sm btn-outline">메일 보내기</a>
+        </div>
+      </div>
+    </div>
+
+    {
+      CHANNELS.map((ch) => (
+        <a
+          href={ch.url}
+          target="_blank"
+          rel="noopener"
+          class="rounded-2xl bg-base-200 p-5 hover:bg-secondary transition-colors"
+        >
+          <div class="font-pixel font-bold mb-1">{ch.name}</div>
+          <div class="text-sm opacity-80">
+            {ch.label} — {ch.desc}
+          </div>
+        </a>
+      ))
+    }
+  </div>
+</BaseLayout>
+
+<script is:inline data-astro-rerun>
+// 복사 버튼. ViewTransitions 재방문마다 재실행(data-astro-rerun), 중복 바인딩은 dataset 가드.
+(() => {
+  const btn = document.getElementById("email-copy");
+  const email = document.getElementById("email-text");
+  if (!btn || !email || btn.dataset.bound) return;
+  btn.dataset.bound = "1";
+  btn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(email.textContent.trim());
+      const old = btn.textContent;
+      btn.textContent = "복사됨!";
+      setTimeout(() => { btn.textContent = old; }, 1200);
+    } catch (e) {
+      // 클립보드 API가 막힌 환경 — 최소한 선택은 되게
+      const r = document.createRange();
+      r.selectNodeContents(email);
+      const sel = getSelection();
+      sel.removeAllRanges();
+      sel.addRange(r);
+    }
+  });
+})();
+</script>
