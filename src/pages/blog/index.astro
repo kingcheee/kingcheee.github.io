@@ -5,21 +5,17 @@ import { getCollection } from "astro:content";
 import createSlug from "../../lib/createSlug";
 
 // 글 갈래 셋. 기본은 회고고, 탭을 누르면 좌우로 미끄러진다.
-// 탭은 버튼이 아니라 링크다 — 스크립트가 죽거나 차단당해도(Brave 실드 등) 클릭이
-// 태그 페이지로 넘어가서 최소한 목록은 보인다. JS가 살아 있으면 preventDefault 로
-// 가로채 슬라이드한다.
-const CATEGORIES = [
-  { name: "회고", href: "/blog/" },
-  { name: "일기", href: "/blog/tag/일기/" },
-  { name: "생각", href: "/blog/tag/생각/" },
-];
+// ★ 탭은 버튼이다 — 절대 태그 페이지 링크로 되돌리지 마라 (2026-08-23 사용자 지시).
+//   링크 폴백은 스크립트가 재바인딩 안 된 순간 태그 페이지로 튕기는 사고를 냈다.
+//   JS가 아예 꺼진 환경은 아래 noscript가 세 갈래를 세로로 다 보여준다.
+const CATEGORIES = ["회고", "일기", "생각"];
 
 const posts = await getCollection("blog");
 posts.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
 
-const groups = CATEGORIES.map((cat) => ({
-  name: cat.name,
-  posts: posts.filter((post) => post.data.tags?.includes(cat.name)),
+const groups = CATEGORIES.map((name) => ({
+  name,
+  posts: posts.filter((post) => post.data.tags?.includes(name)),
 }));
 ---
 
@@ -34,16 +30,16 @@ const groups = CATEGORIES.map((cat) => ({
     class="relative grid grid-cols-3 font-pixel text-base border-b border-base-300 mb-2"
   >
     {
-      CATEGORIES.map((cat, i) => (
-        <a
+      CATEGORIES.map((name, i) => (
+        <button
+          type="button"
           role="tab"
-          href={cat.href}
           class="cat-tab py-3 text-center transition-colors"
           data-index={i}
           aria-selected={i === 0 ? "true" : "false"}
         >
-          {cat.name}
-        </a>
+          {name}
+        </button>
       ))
     }
     <span id="cat-underline"></span>
@@ -135,6 +131,10 @@ const groups = CATEGORIES.map((cat) => ({
 </noscript>
 
 <script>
+  // ViewTransitions 환경: 모듈 스크립트는 최초 1회만 평가되므로, 다른 페이지에 갔다가
+  // 돌아오면 새 DOM에 바인딩이 없다 — 탭이 폴백 링크로 동작해 태그 페이지로 넘어가 버린다.
+  // 그래서 astro:page-load 마다 initTabs를 다시 돌린다 (2026-08-23 실측).
+  function initTabs() {
   const NAMES = ["회고", "일기", "생각"];
   const tabs = Array.from(document.querySelectorAll<HTMLElement>(".cat-tab"));
   const panels = Array.from(document.querySelectorAll<HTMLElement>(".cat-panel"));
@@ -142,7 +142,8 @@ const groups = CATEGORIES.map((cat) => ({
   const viewport = document.getElementById("cat-viewport");
   const underline = document.getElementById("cat-underline");
 
-  if (track && viewport && underline && tabs.length) {
+  if (track && viewport && underline && tabs.length && !track.dataset.bound) {
+    track.dataset.bound = "1";   // 초기 로드 + astro:page-load 중복 실행 가드
     let index = 0;
 
     const fitHeight = () => {
@@ -161,21 +162,18 @@ const groups = CATEGORIES.map((cat) => ({
       if (writeHash) history.replaceState(null, "", "#" + NAMES[index]);
     };
 
-    // 링크를 가로챈다. 여기까지 왔다는 건 스크립트가 살아 있다는 뜻이므로 슬라이드로
-    // 처리하고 이동을 막는다. 스크립트가 죽으면 이 줄이 안 붙어서 그냥 링크로 넘어간다.
-    tabs.forEach((tab, i) =>
-      tab.addEventListener("click", (e) => {
-        e.preventDefault();
-        go(i, true);
-      })
-    );
+    tabs.forEach((tab, i) => tab.addEventListener("click", () => go(i, true)));
 
     // 이미지가 늦게 뜨면 패널 높이가 바뀐다 — 활성 패널을 계속 따라간다
+    const ac = new AbortController();
     if ("ResizeObserver" in window) {
       const ro = new ResizeObserver(() => fitHeight());
       panels.forEach((panel) => ro.observe(panel));
+      ac.signal.addEventListener("abort", () => ro.disconnect());
     }
-    window.addEventListener("resize", fitHeight);
+    window.addEventListener("resize", fitHeight, { signal: ac.signal });
+    // 페이지를 떠나면 window 리스너·옵저버를 정리한다 (재방문 시 새로 바인딩)
+    document.addEventListener("astro:before-swap", () => ac.abort(), { once: true });
 
     // 터치 스와이프
     let startX = 0;
@@ -203,4 +201,7 @@ const groups = CATEGORIES.map((cat) => ({
     const fromHash = NAMES.indexOf(decodeURIComponent(location.hash.slice(1)));
     go(fromHash >= 0 ? fromHash : 0, false);
   }
+  }
+  initTabs();
+  document.addEventListener("astro:page-load", initTabs);
 </script>
