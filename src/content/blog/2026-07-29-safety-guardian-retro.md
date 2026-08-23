@@ -3,7 +3,7 @@ title: "LangGraph로 만든 중대재해처벌법 문서 점검 에이전트 —
 description: "2주 만에 만든 중대재해처벌법 에이전트, 전화 200통"
 pubDate: 2026-07-29
 heroImage: "/images/2026-07-29-safety-guardian-retro/hero.jpg"
-tags: ["회고", "중간프로젝트"]
+tags: ["회고", "프로젝트"]
 ---
 
 중대재해처벌법 의무 이행을 문서로 전수 점검하고 소명자료 초안까지 뽑아주는 에이전트
