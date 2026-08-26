@@ -24,7 +24,7 @@ heroImage: "/images/2026-08-25-ai-beginner-prologue/hero.jpg"
 
 정의를 알고 나니 뭔가 이제 어떻게 접근해야 될지 안 것 같았다. **아 예측을 잘하게끔 해주는 게 바로 프롬프트 엔지니어링이구나.** 컨텍스트 엔지니어링이 뭘 하는 건지는 알았는데, 왜 하는지 어떻게 해야 되는지 갈피가 잡힌 시점이 바로 LLM은 예측 모델이라는 걸 깨달았을 때였다. 그때부터 제미나이가 정확히 뭔지, LLM이 뭔지, 어떻게 잘 활용해야 되는지 이해가 되기 시작하고 관심이 가기 시작했다.
 
-![창가의 새끼 고양이](/images/2026-08-25-ai-beginner-prologue/cat1.jpg) <span>혼자 찾아본 건 대부분 유튜브였다. 3Blue1Brown 같은 것도 봤고 Veritasium도 많이 봤고, 그런 관련 영상들을 많이 봤다. **영상 자체가 재밌었고, 뭔가 쏙쏙 알아가는 느낌이라서 그게 마음에 들었다.**</span>
+![RNN과 Self-attention 비교 도식](/images/2026-08-25-ai-beginner-prologue/attention.jpg) <span>혼자 찾아본 건 대부분 유튜브였다. 3Blue1Brown 같은 것도 봤고 Veritasium도 많이 봤고, 그런 관련 영상들을 많이 봤다. **영상 자체가 재밌었고, 뭔가 쏙쏙 알아가는 느낌이라서 그게 마음에 들었다.**</span>
 
 ## 병목을 찾고 푼다
 
@@ -40,7 +40,7 @@ heroImage: "/images/2026-08-25-ai-beginner-prologue/hero.jpg"
 
 근데 문제가 뭐였냐면, openrouter를 이용한 무료 모델(owl-alpha)을 썼었는데 이게 모델이 안 좋다 보니까 문제가 드러났다. 강의 듣는 에이전트를 다 만들고, 같은 에이전트보고 수업 요약 글도 써달라고 했다. 거기서 문제가 생겼다.
 
-![낙엽 위의 치즈냥](/images/2026-08-25-ai-beginner-prologue/cat2.jpg) <span>증상은 세 가지였다. 그냥 아예 오류가 나거나, 요약을 아예 안 하거나, 갑자기 수업을 들으려고 녹화 프로그램을 킨다든가 했다.</span>
+![눈동자 일러스트](/images/2026-08-25-ai-beginner-prologue/eye.jpg) <span>증상은 세 가지였다. 그냥 아예 오류가 나거나, 요약을 아예 안 하거나, 갑자기 수업을 들으려고 녹화 프로그램을 킨다든가 했다.</span>
 
 이때 두 번째를 깨달았다. 바로 context-rotting 방지다. **축구를 잘하는 사람은 농구를 잘할 수 없고, AI도 그게 똑같다.** 농구용 에이전트를 만들면 축구용 에이전트는 따로 만들어야 하고, 다른 작업을 같은 에이전트에게 시키면 컨텍스트 로팅이 일어난다. 이걸 두 번째로 생각해야 한다.
 
@@ -50,15 +50,13 @@ heroImage: "/images/2026-08-25-ai-beginner-prologue/hero.jpg"
 
 hermes-agent를 하네싱할 때, **쓰면 쓸수록 프롬프트를 작성하는 것부터 모든 걸 다 클로드한테 맡기고 있었다.** 그래서 클로드한테 어차피 계속 맡기고 있는데 클로드 코드를 써봐야지 하고 7월 중순에 생각했다.
 
-![담벼락에 누운 고양이](/images/2026-08-25-ai-beginner-prologue/cat3.jpg) <span>그리고 제주도에서 호남IS해커톤을 나갔는데, 거기서 클로드 API를 무제한으로 지원해줬다. 뒤도 안 보고 진행해서 클로드를 엄청 많이 돌렸다. 토큰값만 2,400달러를 썼다. 팀이랑 주제 얘기는 [호남IS해커톤 회고](/blog/2026-07-31-is-hackathon-retro/)에 따로 썼으니 여기서는 안 쓰겠다. **결과부터 적자면 수상은 못 했다.**</span>
+![조준점](/images/2026-08-25-ai-beginner-prologue/crosshair.jpg) <span>그리고 제주도에서 호남IS해커톤을 나갔는데, 거기서 클로드 API를 무제한으로 지원해줬다. 뒤도 안 보고 진행해서 클로드를 엄청 많이 돌렸다. 토큰값만 2,400달러를 썼다. 팀이랑 주제 얘기는 [호남IS해커톤 회고](/blog/2026-07-31-is-hackathon-retro/)에 따로 썼으니 여기서는 안 쓰겠다. **결과부터 적자면 수상은 못 했다.**</span>
 
 그렇게 하면서 깨달은 게 바로 공학자 마인드와 컨텍스트 로팅이라는 개념을 이해한 거였다. hermes-agent를 이용하면서 몸소 느꼈던 것들인데, 이걸 이론적으로 이해한 게 이때다. **이 개념을 알고 있으면 무한 API가 없어도 충분히 컨텍스트 엔지니어링이랑 하네스 엔지니어링이 가능할 뿐더러, 바이브 코딩하기가 쉬워진다.**
 
 ## 아직 4주도 안 됐다
 
 이론적으로 이해한 게 7월 30일이다. 그래서 이 글은 여기까지만 쓴다. 비전공자가 이해하는 API가 뭔지, 스킬이 뭔지, 폴더구조가 뭔지는 다음 글들에서 하나씩 쓸 생각이다.
-
-고양이 사진은 전부 위키미디어 공용에서 가져왔다. 순서대로 — [Kittyply](https://commons.wikimedia.org/wiki/File:Kittyply_edit1.jpg) (David Corby, CC BY 2.5) · [Juvenile Ragdoll](https://commons.wikimedia.org/wiki/File:Juvenile_Ragdoll.jpg) (Leijurv, CC BY-SA 4.0) · [Orange tabby cat](https://commons.wikimedia.org/wiki/File:Orange_tabby_cat_sitting_on_fallen_leaves-Hisashi-01A.jpg) (Hisashi, CC BY-SA 2.0) · [Cat August 2010-4](https://commons.wikimedia.org/wiki/File:Cat_August_2010-4.jpg) (Alvesgaspar, CC BY-SA 3.0).
 
 > Much learning does not teach understanding.
 > — Heraclitus, *Fragments*
