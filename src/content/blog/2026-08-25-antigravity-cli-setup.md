@@ -1,8 +1,8 @@
 ---
-title: "학생 무료로 풀린 제미나이 Pro 최대 활용하기 — Antigravity 설치편"
+title: "Google Pro 최대 활용하기: Antigravity 설치 - AI 입문기"
 description: "설치는 명령어 한 줄이고, 나머지는 폴더가 한다."
 pubDate: 2026-08-25
-tags: ["회고", "튜토리얼"]
+tags: ["회고", "튜토리얼", "AI", "입문"]
 heroImage: "/images/2026-08-25-antigravity-cli-setup/hero.jpg"
 ---
 
