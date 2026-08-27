@@ -88,7 +88,9 @@ const show = items.length >= 2;
         if (!el) return;
         ev.preventDefault();
         el.scrollIntoView({ behavior: "smooth", block: "start" });
-        history.replaceState(null, "", a.getAttribute("href"));
+        // 1번 인자는 history.state 를 그대로 넘긴다 — null 이면 ViewTransitions 상태가
+        // 지워져 뒤로가기가 깨진다 (blog/index.astro 와 같은 건, 2026-08-27)
+        history.replaceState(history.state, "", a.getAttribute("href"));
         // 클릭 즉시 칠하지 않는다 — 하이라이트는 스크롤을 따라온다 (2026-08-17 사용자 피드백)
       });
     });

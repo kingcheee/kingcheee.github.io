@@ -159,7 +159,11 @@ const groups = CATEGORIES.map((name) => ({
         tab.setAttribute("aria-selected", i === index ? "true" : "false");
       });
       fitHeight();
-      if (writeHash) history.replaceState(null, "", "#" + NAMES[index]);
+      // ★ 1번 인자는 반드시 history.state — null 을 넣으면 ViewTransitions 가 그 항목에
+      //   저장해 둔 {index, scrollX, scrollY} 가 지워지고, 글에서 뒤로 왔을 때
+      //   Astro 라우터가 DOM 을 못 갈아끼운다 (URL 만 바뀌고 글 본문이 그대로 남는다).
+      //   2026-08-27 실측으로 확인하고 고침.
+      if (writeHash) history.replaceState(history.state, "", "#" + NAMES[index]);
     };
 
     tabs.forEach((tab, i) => tab.addEventListener("click", () => go(i, true)));
