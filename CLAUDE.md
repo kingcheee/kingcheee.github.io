@@ -55,6 +55,19 @@ ViewTransitions 재진입처럼 스크립트가 안 붙은 순간 클릭이 `/bl
 실제로 났던 사고다. JS가 꺼진 환경은 noscript 폴백이 세 갈래를 세로로 다 보여준다.
 탭 초기화는 `astro:page-load`마다 다시 돈다 — 이 재초기화도 빼지 마라.
 
+## history.replaceState 를 쓸 때는 1번 인자에 `history.state` 를 넘긴다
+
+**`null` 을 넣으면 ViewTransitions 가 그 history 항목에 저장해 둔 `{index, scrollX, scrollY}` 가
+지워지고, 그 항목으로 뒤로 왔을 때 Astro 라우터가 DOM 을 못 갈아끼운다** — URL 만 바뀌고
+직전 페이지 본문이 화면에 그대로 남는다 (2026-08-27 실측·수정).
+
+- 증상: `/blog/` 에서 탭을 누르면(해시가 써진다) 글로 들어갔다 뒤로 왔을 때 주소는
+  `/blog/#일기` 인데 화면은 글 본문. 탭이 선택 안 되는 게 아니라 **페이지 자체가 안 바뀐 것**이었다.
+- 확인법: 해시를 쓰는 조작 직후 `history.state` 를 찍어 본다. `null` 이면 이 버그다.
+- 해당 위치 둘: `src/pages/blog/index.astro`(갈래 탭) · `src/components/TableOfContents.astro`(목차 클릭).
+- **캐시 주의**: GitHub Pages 는 HTML 을 10분 캐시한다. 고친 뒤 확인할 때 옛 스크립트를
+  물고 있으면 안 고쳐진 것처럼 보인다 — 쿼리스트링을 붙이거나 강제 새로고침으로 확인한다.
+
 ## 템플릿에서 바꾼 것
 
 - 패키지 매니저: pnpm → npm (이 머신에 pnpm 없음, package-lock.json이 정본)
