@@ -3,9 +3,10 @@
 // NAVER_PREPARE_ONLY=1 이면 변환 파일만 만들고 미리보기는 띄우지 않는다(검증용).
 // 주의: @jjlabsio/mtnb의 preview는 macOS 전용(`open`)이라 Windows에서 깨진다 —
 // 그래서 미리보기 HTML은 여기서 직접 만들고 `start`로 연다 (2026-08-17 실측).
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from "node:fs";
 import { execSync, spawn } from "node:child_process";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { convert } from "@jjlabsio/md-to-naver-blog";
 
 const SITE = "https://kingcheee.github.io";
@@ -130,6 +131,34 @@ writeFileSync(previewPath, page);
 if (process.env.NAVER_PREPARE_ONLY === "1") {
   console.log("PREPARE_ONLY: " + previewPath);
 } else {
-  spawn("cmd.exe", ["/c", "start", "", previewPath], { stdio: "ignore", detached: true });
-  console.log("미리보기를 브라우저로 열었습니다: " + previewPath);
+  // Chrome for Testing(naver-agent가 쓰는 Playwright 크로미움)으로 연다 (2026-08-30 사용자 지시).
+  // 1순위: 이미 떠 있는 그 브라우저의 CDP(9222)에 새 탭으로 붙인다 — 네이버 로그인 창과 같은 브라우저다.
+  // 2순위: 안 떠 있으면 같은 바이너리를 미리보기 전용 프로필로 띄운다 (naver-agent의 profile/은 건드리지 않는다 — 충돌).
+  const fileUrl = pathToFileURL(previewPath).href;
+  let opened = false;
+  try {
+    const r = await fetch("http://127.0.0.1:9222/json/new?" + encodeURIComponent(fileUrl), {
+      method: "PUT",
+      signal: AbortSignal.timeout(2000),
+    });
+    opened = r.ok;
+  } catch { /* CDP 안 떠 있음 */ }
+
+  if (opened) {
+    console.log("미리보기를 Chrome for Testing(CDP 9222) 새 탭으로 열었습니다: " + previewPath);
+  } else {
+    const pw = path.join(process.env.LOCALAPPDATA || "", "ms-playwright");
+    const dir = existsSync(pw)
+      ? readdirSync(pw).find((d) => d.startsWith("chromium-") && !d.includes("headless"))
+      : null;
+    const bin = dir ? path.join(pw, dir, "chrome-win64", "chrome.exe") : null;
+    if (bin && existsSync(bin)) {
+      const prof = path.join(process.env.TEMP || ".", "naver-preview-profile");
+      spawn(bin, [`--user-data-dir=${prof}`, previewPath], { stdio: "ignore", detached: true });
+      console.log("미리보기를 Chrome for Testing으로 열었습니다: " + previewPath);
+    } else {
+      spawn("cmd.exe", ["/c", "start", "", previewPath], { stdio: "ignore", detached: true });
+      console.log("Chrome for Testing을 못 찾아 기본 브라우저로 열었습니다: " + previewPath);
+    }
+  }
 }
