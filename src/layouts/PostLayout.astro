@@ -2,14 +2,17 @@
 import { type BlogSchema } from "../content/config";
 import BaseLayout from "./BaseLayout.astro";
 import TableOfContents from "../components/TableOfContents.astro";
+import PostNav from "../components/PostNav.astro";
+import type { PostNavData } from "../lib/postNav";
 import dayjs from "dayjs";
 import localizedFormat from "dayjs/plugin/localizedFormat";
 
 export interface Props extends BlogSchema {
   headings?: { depth: number; slug: string; text: string }[];
+  nav?: PostNavData;
 }
 
-const { title, description, pubDate, updatedDate, heroImage, badge, tags = [], headings = [] } = Astro.props;
+const { title, description, pubDate, updatedDate, heroImage, badge, tags = [], headings = [], nav } = Astro.props;
 dayjs.extend(localizedFormat);
 const displayDate = dayjs(pubDate).format("ll")
 import { Image } from "astro:assets";
@@ -41,6 +44,7 @@ import { Image } from "astro:assets";
       }
       <div class="divider my-2"></div>
       <slot />
+      {nav && <PostNav {...nav} />}
     </article>
 
     <TableOfContents headings={headings} title={title} />

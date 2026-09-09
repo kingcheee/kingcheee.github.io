@@ -3,20 +3,23 @@ import { CollectionEntry, getCollection } from "astro:content";
 import { BlogSchema } from "../../content/config";
 import PostLayout from "../../layouts/PostLayout.astro";
 import createSlug from "../../lib/createSlug"
+import { postNav, type PostNavData } from "../../lib/postNav";
 
 export async function getStaticPaths() {
   const postEntries = await getCollection("blog");
   return postEntries.map((entry) => ({
     params: { slug: createSlug(entry.data.title, entry.slug) },
-    props: { entry },
+    // 글 끝 이전/다음/돌아가기 — 같은 갈래 안에서 잇는다 (src/lib/postNav.ts, 2026-09-09)
+    props: { entry, nav: postNav(postEntries, entry) },
   }));
 }
 
 interface Props {
   entry: CollectionEntry<"blog">;
+  nav: PostNavData;
 }
 
-const { entry } = Astro.props;
+const { entry, nav } = Astro.props;
 const post: BlogSchema = entry.data;
 const { Content, headings } = await entry.render();
 ---
@@ -30,6 +33,7 @@ const { Content, headings } = await entry.render();
   badge={post.badge}
   tags={post.tags}
   headings={headings}
+  nav={nav}
 >
   <Content />
 </PostLayout>

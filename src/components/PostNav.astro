@@ -1,0 +1,50 @@
+---
+// 글 끝 내비게이션 — 같은 갈래 안에서 이전(더 오래된)/다음(더 최근) 글 + 목록으로 돌아가기 (2026-09-09).
+// 데이터는 src/lib/postNav.ts가 빌드 타임에 계산한다. 순수 <a> 링크라 스크립트가 없다 —
+// ViewTransitions 재진입 때 바인딩이 빠지는 문제(갈래 탭에서 났던 사고)가 원리적으로 없다.
+// 스타일은 docs/design.md 규격: 카드 테두리 없이 divider 선 하나, 라벨은 픽셀체, 제목은 본문체.
+import type { PostNavData } from "../lib/postNav";
+
+interface Props extends PostNavData {}
+
+const { prev, next, backUrl } = Astro.props;
+---
+
+<nav class="post-nav not-prose mt-14" aria-label="이전·다음 글">
+  <div class="divider my-2"></div>
+
+  {/* 좁은 화면은 세로로 쌓는다 — 반폭에 한글 제목을 넣으면 네 줄까지 늘어난다 */}
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 py-2">
+    {
+      prev && (
+        <a href={prev.url} rel="prev" class="post-nav-link group block no-underline">
+          <span class="block font-pixel text-sm mb-1">← 이전 글</span>
+          <span class="post-nav-title block font-bold line-clamp-2 group-hover:text-primary">
+            {prev.title}
+          </span>
+        </a>
+      )
+    }
+    {
+      next && (
+        <a href={next.url} rel="next" class="post-nav-link group block no-underline sm:col-start-2 sm:text-right">
+          <span class="block font-pixel text-sm mb-1">다음 글 →</span>
+          <span class="post-nav-title block font-bold line-clamp-2 group-hover:text-primary">
+            {next.title}
+          </span>
+        </a>
+      )
+    }
+  </div>
+
+  <div class="text-center mt-4">
+    <a href={backUrl} class="link link-hover font-pixel">전체 글로 돌아가기</a>
+  </div>
+</nav>
+
+<style>
+  .post-nav-title {
+    color: #23281e;
+    transition: color 0.15s ease-out;
+  }
+</style>
