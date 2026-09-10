@@ -2,9 +2,10 @@
 // 사용: npm run naver -- <글-슬러그>   (예: npm run naver -- 2026-08-16-building-this-blog)
 // NAVER_PREPARE_ONLY=1 이면 변환 파일만 만들고 미리보기는 띄우지 않는다(검증용).
 // 주의: @jjlabsio/mtnb의 preview는 macOS 전용(`open`)이라 Windows에서 깨진다 —
-// 그래서 미리보기 HTML은 여기서 직접 만들고 `start`로 연다 (2026-08-17 실측).
+// 그래서 미리보기 HTML은 여기서 직접 만들고 OS별로 연다 (2026-08-17 실측, 2026-09-10 리눅스 분기 추가).
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from "node:fs";
 import { execSync, spawn } from "node:child_process";
+import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { convert } from "@jjlabsio/md-to-naver-blog";
@@ -131,9 +132,11 @@ writeFileSync(previewPath, page);
 if (process.env.NAVER_PREPARE_ONLY === "1") {
   console.log("PREPARE_ONLY: " + previewPath);
 } else {
-  // Chrome for Testing(naver-agent가 쓰는 Playwright 크로미움)으로 연다 (2026-08-30 사용자 지시).
-  // 1순위: 이미 떠 있는 그 브라우저의 CDP(9222)에 새 탭으로 붙인다 — 네이버 로그인 창과 같은 브라우저다.
-  // 2순위: 안 떠 있으면 같은 바이너리를 미리보기 전용 프로필로 띄운다 (naver-agent의 profile/은 건드리지 않는다 — 충돌).
+  // 1순위: 떠 있는 naver-agent 브라우저의 CDP(9222)에 새 탭으로 붙인다 (2026-08-30 사용자 지시 — 네이버 로그인과 같은 브라우저).
+  //   2026-09-10부터 리눅스의 naver-agent 브라우저는 헤드리스 Brave라 이 탭은 눈에 안 보인다. 에이전트가 미리보기를
+  //   쓸 때는 NAVER_PREPARE_ONLY=1 로 파일만 만들고, file:// 로드는 그쪽이 직접 한다.
+  // 2순위(Windows): 같은 바이너리(Chrome for Testing)를 미리보기 전용 프로필로 띄운다 (naver-agent의 profile/은 건드리지 않는다 — 충돌).
+  // 3순위: 기본 브라우저.
   const fileUrl = pathToFileURL(previewPath).href;
   let opened = false;
   try {
@@ -145,20 +148,48 @@ if (process.env.NAVER_PREPARE_ONLY === "1") {
   } catch { /* CDP 안 떠 있음 */ }
 
   if (opened) {
-    console.log("미리보기를 Chrome for Testing(CDP 9222) 새 탭으로 열었습니다: " + previewPath);
+    console.log("미리보기를 naver-agent 브라우저(CDP 9222) 새 탭으로 열었습니다: " + previewPath);
   } else {
-    const pw = path.join(process.env.LOCALAPPDATA || "", "ms-playwright");
-    const dir = existsSync(pw)
-      ? readdirSync(pw).find((d) => d.startsWith("chromium-") && !d.includes("headless"))
-      : null;
-    const bin = dir ? path.join(pw, dir, "chrome-win64", "chrome.exe") : null;
-    if (bin && existsSync(bin)) {
-      const prof = path.join(process.env.TEMP || ".", "naver-preview-profile");
-      spawn(bin, [`--user-data-dir=${prof}`, previewPath], { stdio: "ignore", detached: true });
+    // 리눅스에선 naver-agent 브라우저가 헤드리스 Brave라(2026-09-10) 별도 크로미움 창을 띄우지 않는다 — 기본 브라우저로.
+    const bin = process.platform === "win32" ? playwrightChromium() : null;
+    if (bin) {
+      const prof = path.join(os.tmpdir(), "naver-preview-profile");
+      spawn(bin, [`--user-data-dir=${prof}`, previewPath], { stdio: "ignore", detached: true }).unref();
       console.log("미리보기를 Chrome for Testing으로 열었습니다: " + previewPath);
     } else {
-      spawn("cmd.exe", ["/c", "start", "", previewPath], { stdio: "ignore", detached: true });
+      const [cmd, args] =
+        process.platform === "win32" ? ["cmd.exe", ["/c", "start", "", previewPath]]
+        : process.platform === "darwin" ? ["open", [previewPath]]
+        : ["xdg-open", [previewPath]];
+      spawn(cmd, args, { stdio: "ignore", detached: true }).unref();
       console.log("Chrome for Testing을 못 찾아 기본 브라우저로 열었습니다: " + previewPath);
     }
   }
+}
+
+// Playwright가 내려받은 크로미움(Chrome for Testing) 바이너리 — Windows 시절 naver-agent가 쓰던 캐시다 (리눅스 naver-agent는 2026-09-10부터 Brave).
+//   Windows: %LOCALAPPDATA%\ms-playwright\chromium-*\chrome-win64\chrome.exe           (2026-08-30 실측)
+//   Linux:   ~/.cache/ms-playwright/chromium-*/chrome-linux64/chrome                  (2026-09-10 Omarchy 실측 — 옛 빌드는 chrome-linux/)
+//   macOS:   ~/Library/Caches/ms-playwright/chromium-*/chrome-mac/Chromium.app/...     (미실측)
+// PLAYWRIGHT_BROWSERS_PATH가 있으면 그것을 우선한다. 없으면 null — 호출부가 기본 브라우저로 폴백한다.
+function playwrightChromium() {
+  const home = os.homedir();
+  const pw =
+    process.env.PLAYWRIGHT_BROWSERS_PATH ||
+    (process.platform === "win32" ? path.join(process.env.LOCALAPPDATA || "", "ms-playwright")
+      : process.platform === "darwin" ? path.join(home, "Library", "Caches", "ms-playwright")
+      : path.join(process.env.XDG_CACHE_HOME || path.join(home, ".cache"), "ms-playwright"));
+  if (!existsSync(pw)) return null;
+  const candidates =
+    process.platform === "win32" ? [["chrome-win64", "chrome.exe"]]
+    : process.platform === "darwin" ? [["chrome-mac", "Chromium.app", "Contents", "MacOS", "Chromium"]]
+    : [["chrome-linux64", "chrome"], ["chrome-linux", "chrome"]];
+  const dirs = readdirSync(pw).filter((d) => d.startsWith("chromium-") && !d.includes("headless")).sort().reverse();
+  for (const d of dirs) {
+    for (const rel of candidates) {
+      const bin = path.join(pw, d, ...rel);
+      if (existsSync(bin)) return bin;
+    }
+  }
+  return null;
 }
