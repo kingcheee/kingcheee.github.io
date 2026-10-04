@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Turtle Timer</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%23379427'/></svg>">
+  <!-- Mona12 pixel font (the only external load) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/MonadABXY/mona-font/web/mona.css" />
+  <link rel="stylesheet" href="style.css?v=3">
+</head>
+<body>
+  <main class="app">
+    <header class="head">
+      <h1 class="title">Turtle Timer</h1>
+      <nav class="mode-tabs" role="tablist">
+        <button id="tab-timer" class="tab active" role="tab" aria-selected="true" aria-controls="panel-timer">Timer</button>
+        <button id="tab-stopwatch" class="tab" role="tab" aria-selected="false" aria-controls="panel-stopwatch">Stopwatch</button>
+      </nav>
+    </header>
+
+    <section id="panel-timer" role="tabpanel">
+      <div class="clock">
+        <div id="timer-display" class="display">25:00</div>
+        <div id="status-label" class="label" aria-live="polite">Ready</div>
+        <p id="completion-banner" class="banner" hidden>done. take a break.</p>
+      </div>
+
+      <div class="rule"></div>
+
+      <div class="controls">
+        <button id="btn-start" class="btn btn-primary">Start</button>
+        <button id="btn-pause" class="btn" disabled>Stop</button>
+        <button id="btn-reset" class="btn" disabled>Reset</button>
+      </div>
+
+      <div class="time-input">
+        <button id="btn-dec" class="btn btn-step" aria-label="5 minutes less">−5</button>
+        <label><input id="hour-input" type="number" inputmode="numeric" min="0" max="99" value="0"><span class="unit">h</span></label>
+        <label><input id="min-input" type="number" inputmode="numeric" min="0" max="599" value="25"><span class="unit">min</span></label>
+        <button id="btn-inc" class="btn btn-step" aria-label="5 minutes more">+5</button>
+      </div>
+      <p class="hint">space start / stop · r reset</p>
+    </section>
+
+    <section id="panel-stopwatch" role="tabpanel" hidden>
+      <div class="clock">
+        <div id="sw-display" class="display display-sw"><span id="sw-main">00:00</span><span id="sw-cs" class="cs">.00</span></div>
+        <div id="sw-status" class="label" aria-live="polite">Ready</div>
+      </div>
+
+      <div class="rule"></div>
+
+      <div class="controls">
+        <button id="sw-start" class="btn btn-primary">Start</button>
+        <button id="sw-stop" class="btn" disabled>Stop</button>
+        <button id="sw-reset" class="btn" disabled>Reset</button>
+      </div>
+      <p class="hint">space start / stop · r reset</p>
+    </section>
+    <footer class="site-link"><a href="https://kingcheee.github.io/">kingcheee.github.io</a></footer>
+  </main>
+
+  <script src="app.js?v=3"></script>
+</body>
+</html>

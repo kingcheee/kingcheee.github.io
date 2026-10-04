@@ -18,7 +18,7 @@ const { activeItemID } = Astro.props;
         class="w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded-full"
         alt="프로필"
       />
-      <span class="truncate text-base sm:text-lg font-bold font-pixel">김지우 🐢</span>
+      <span class="truncate text-base sm:text-lg font-bold font-pixel max-[440px]:hidden">김지우 🐢</span>
     </a>
     <nav class="shrink-0">
       <ul
@@ -32,6 +32,10 @@ const { activeItemID } = Astro.props;
         </li>
         <li>
           <a id="game" href="/game/" class="px-2 sm:px-4 whitespace-nowrap">Game</a>
+        </li>
+        <li>
+          <!-- /timer/ 는 public/timer/ 의 정적 앱(Astro 페이지 아님) — ViewTransitions 라우터를 타지 않게 전체 로드 -->
+          <a id="timer" href="/timer/" data-astro-reload class="px-2 sm:px-4 whitespace-nowrap">Timer</a>
         </li>
         <li>
           <a id="contact" href="/contact/" class="px-2 sm:px-4 whitespace-nowrap">Contact</a>
