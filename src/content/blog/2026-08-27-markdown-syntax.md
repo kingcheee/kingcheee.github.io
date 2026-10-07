@@ -2,7 +2,7 @@
 title: "AI와 같은 문법으로 쓰기: 마크다운 — AI 입문기"
 description: "제목이랑 볼드체를 쓰면 AI도 똑같이 이해한다."
 pubDate: 2026-08-27
-tags: ["회고", "튜토리얼", "AI", "입문"]
+tags: ["공부", "튜토리얼", "AI", "입문"]
 heroImage: "/images/2026-08-27-markdown-syntax/hero.jpg"
 ---
 
@@ -31,7 +31,7 @@ heroImage: "/images/2026-08-27-markdown-syntax/hero.jpg"
 title: "AI와 같은 문법으로 쓰기: 마크다운 — AI 입문기"
 description: "제목이랑 볼드체를 쓰면 AI도 똑같이 이해한다."
 pubDate: 2026-08-27
-tags: ["회고", "튜토리얼", "AI", "입문"]
+tags: ["공부", "튜토리얼", "AI", "입문"]
 heroImage: "/images/2026-08-27-markdown-syntax/hero.jpg"
 ---
 ```

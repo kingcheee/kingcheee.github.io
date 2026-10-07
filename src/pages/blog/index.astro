@@ -4,11 +4,11 @@ import HorizontalCard from "../../components/HorizontalCard.astro";
 import { getCollection } from "astro:content";
 import createSlug from "../../lib/createSlug";
 
-// 글 갈래 셋. 기본은 회고고, 탭을 누르면 좌우로 미끄러진다.
+// 글 갈래 넷. 기본은 회고고, 탭을 누르면 좌우로 미끄러진다.
 // ★ 탭은 버튼이다 — 절대 태그 페이지 링크로 되돌리지 마라 (2026-08-23 사용자 지시).
 //   링크 폴백은 스크립트가 재바인딩 안 된 순간 태그 페이지로 튕기는 사고를 냈다.
-//   JS가 아예 꺼진 환경은 아래 noscript가 세 갈래를 세로로 다 보여준다.
-const CATEGORIES = ["회고", "일기", "생각"];
+//   JS가 아예 꺼진 환경은 아래 noscript가 네 갈래를 세로로 다 보여준다.
+const CATEGORIES = ["회고", "일기", "생각", "공부"];
 
 const posts = await getCollection("blog");
 posts.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
@@ -27,7 +27,7 @@ const groups = CATEGORIES.map((name) => ({
   <div
     id="cat-tabs"
     role="tablist"
-    class="relative grid grid-cols-3 font-pixel text-base border-b border-base-300 mb-2"
+    class="relative grid grid-cols-4 font-pixel text-base border-b border-base-300 mb-2"
   >
     {
       CATEGORIES.map((name, i) => (
@@ -92,7 +92,7 @@ const groups = CATEGORIES.map((name) => ({
     position: absolute;
     bottom: -1px;
     left: 0;
-    width: 33.3333%;
+    width: 25%;
     height: 3px;
     border-radius: 999px;
     background: #86d14f;
@@ -124,7 +124,7 @@ const groups = CATEGORIES.map((name) => ({
 
 <noscript>
   <style>
-    /* JS가 없으면 세 갈래를 그냥 세로로 다 보여준다 */
+    /* JS가 없으면 네 갈래를 그냥 세로로 다 보여준다 */
     #cat-viewport { height: auto !important; overflow: visible; }
     #cat-track { display: block; }
   </style>
@@ -135,7 +135,7 @@ const groups = CATEGORIES.map((name) => ({
   // 돌아오면 새 DOM에 바인딩이 없다 — 탭이 폴백 링크로 동작해 태그 페이지로 넘어가 버린다.
   // 그래서 astro:page-load 마다 initTabs를 다시 돌린다 (2026-08-23 실측).
   function initTabs() {
-  const NAMES = ["회고", "일기", "생각"];
+  const NAMES = ["회고", "일기", "생각", "공부"];
   const tabs = Array.from(document.querySelectorAll<HTMLElement>(".cat-tab"));
   const panels = Array.from(document.querySelectorAll<HTMLElement>(".cat-panel"));
   const track = document.getElementById("cat-track");

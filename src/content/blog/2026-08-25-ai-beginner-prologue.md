@@ -2,7 +2,7 @@
 title: "전역 87일 동안 LLM을 이해한 순서 — AI 입문기"
 description: "몸으로 하던 걸 이론으로 옮기는 데 3달이 걸렸다."
 pubDate: 2026-08-25
-tags: ["회고", "AI", "입문"]
+tags: ["공부", "AI", "입문"]
 heroImage: "/images/2026-08-25-ai-beginner-prologue/hero.jpg"
 ---
 

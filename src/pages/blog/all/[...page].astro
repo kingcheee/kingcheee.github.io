@@ -4,7 +4,7 @@ import HorizontalCard from "@components/HorizontalCard.astro";
 import { getCollection } from "astro:content";
 import createSlug from "../../../lib/createSlug";
 
-// 갈래를 안 나눈 전체 목록. /blog/ 는 한 페이지에 세 갈래를 다 깔아야 해서 페이지를
+// 갈래를 안 나눈 전체 목록. /blog/ 는 한 페이지에 네 갈래를 다 깔아야 해서 페이지를
 // 못 나누는데, 여기는 갈래 전환이 없으니 10개씩 끊는다.
 export async function getStaticPaths({ paginate }) {
   const posts = await getCollection("blog");

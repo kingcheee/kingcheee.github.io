@@ -4,9 +4,9 @@
 import type { CollectionEntry } from "astro:content";
 import createSlug from "./createSlug";
 
-// /blog/ 갈래 탭과 같은 이름·순서 (blog/index.astro의 CATEGORIES). 글의 갈래는 tags 중 이 셋에
+// /blog/ 갈래 탭과 같은 이름·순서 (blog/index.astro의 CATEGORIES). 글의 갈래는 tags 중 이 넷에
 // 먼저 걸리는 것 하나다.
-export const CATEGORIES = ["회고", "일기", "생각"] as const;
+export const CATEGORIES = ["회고", "일기", "생각", "공부"] as const;
 export type Category = (typeof CATEGORIES)[number];
 
 type Entry = CollectionEntry<"blog">;
