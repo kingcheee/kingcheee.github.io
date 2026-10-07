@@ -30,5 +30,16 @@ const {
       </main>
     </div>
     <Footer />
+    <script>
+      // ViewTransitions(클라이언트 라우팅)로 들어온 페이지의 <video src>는 DOMParser의 inert 문서에서
+      // 파싱되는 바람에 error.code 4(SRC_NOT_SUPPORTED)·networkState 3 상태로 바뀌어 들어온다
+      // (2026-10-07 실측 — 주소로 직접 열면 정상, 목록·이전/다음 링크로 들어오면 0:00 빈 플레이어).
+      // 페이지 로드마다 그런 요소만 load()를 다시 불러 복구한다. 처음 전체 로드 때는 해당 없음.
+      document.addEventListener("astro:page-load", () => {
+        for (const media of document.querySelectorAll("video, audio")) {
+          if (media.error || media.networkState === HTMLMediaElement.NETWORK_NO_SOURCE) media.load();
+        }
+      });
+    </script>
   </body>
 </html>
