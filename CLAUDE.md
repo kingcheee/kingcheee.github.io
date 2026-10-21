@@ -15,9 +15,18 @@ Astrofy 템플릿 기반 (https://github.com/manuelernestog/astrofy, 커밋 9398
 - `npm run dev` — 로컬 개발 서버 (미실행·미확인)
 - 배포: main에 push하면 GitHub Actions(`.github/workflows/deploy.yml`)가 빌드·배포한다
 
+## 클라우드 세션 (claude.ai/code, 2026-10-22)
+
+이동 중엔 클라우드 세션에서 이 repo를 다룬다. 사이트·portfolio-agent·blog-drafts 세 repo를 붙이고 환경은 Default —
+북마크 URL과 규칙 전문은 portfolio-agent `.claude/CLAUDE.md` 「클라우드 세션」 절(같은 세션에 자동 로드된다).
+요점: 첫 작업으로 `bash /home/user/portfolio-agent/tools/cloud-setup.sh`(경로 맞추기),
+빌드 전 `npm ci`, 커밋 후 `git pull --rebase origin main` → `git push origin HEAD:main`.
+데스크톱으로 돌아오면 작업 전에 `git pull --ff-only`부터 — 클라우드가 main에 직접 push한다.
+
 ## 글 발행 흐름
 
-1. 초안은 `drafts/`에 (gitignore됨 — 공개 repo에 초안을 올리지 않는다)
+1. 초안은 `drafts/`에 (gitignore됨 — 공개 repo에 초안을 올리지 않는다). `drafts/`는 그 자체로
+   비공개 repo `kingcheee/blog-drafts`다 — 초안을 바꾸면 거기에 커밋·push한다 (2026-10-22)
 2. 승인된 글만 `src/content/blog/YYYY-MM-DD-slug.md`로 옮긴다
 3. **파일명이 곧 URL 슬러그다** — 영문 소문자-하이픈으로 짓는다.
    `GENERATE_SLUG_FROM_TITLE`는 반드시 false 유지: 한글 제목은 슬러그 생성 규칙에
@@ -32,13 +41,13 @@ Astrofy 템플릿 기반 (https://github.com/manuelernestog/astrofy, 커밋 9398
 - **다이어그램**: 본문에 ` ```mermaid ` 코드블록을 쓰면 브라우저에서 렌더링된다
   (PostLayout의 인라인 스크립트가 CDN mermaid@11을 블록이 있을 때만 로드. 2026-08-16 실측)
 
-글 초안 작성은 portfolio-agent(`C:\workspace\03-agents\portfolio-agent`)의
+글 초안 작성은 portfolio-agent(`~/workspace/03-agents/portfolio-agent`, GitHub `kingcheee/portfolio-agent` 비공개)의
 `/write-post` 스킬이 담당한다 — 인터뷰→초안→승인→발행 규율이 거기 있다.
 
 ## 네이버 블로그 크로스포스팅 (2026-08-17 결정)
 
 발행된 글을 네이버에도 올린다. **완전 자동 발행은 금지** — 네이버 약관 위반 + 봇 탐지 +
-검색 저품질 페널티 (리서치: `C:\projects\00-research\2026-08\w2\2026-08-16-crossposting-naver\`).
+검색 저품질 페널티 (리서치: `~/projects/00-research/2026-08/w2/2026-08-16-crossposting-naver/`).
 채택 방식은 클립보드 반자동:
 
 1. `npm run naver -- <글-슬러그>` → 마크다운을 네이버 에디터 호환 HTML로 변환해

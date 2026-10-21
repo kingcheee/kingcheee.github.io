@@ -22,7 +22,8 @@ pnpm-debug.log*
 .astro/
 
 # 발행 전 초안·리서치·네이버 변환 산출물 (공개 repo에 올리지 않는다)
-drafts/
+# drafts는 슬래시 없이 — 클라우드 세션에선 blog-drafts repo로 가는 심볼릭 링크라 `drafts/`로는 안 걸린다
+drafts
 research/
 naver-out/
 
