@@ -2,7 +2,7 @@
 title: "구글에 검색하면 나오겠는데?"
 description: "나도 성공하고 싶다."
 pubDate: 2026-08-16
-tags: ["회고", "블로그", "에이전트"]
+tags: ["생각", "블로그", "에이전트"]
 heroImage: "/images/2026-08-16-building-this-blog/hero.jpg"
 ---
 
