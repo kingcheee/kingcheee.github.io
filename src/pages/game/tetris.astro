@@ -1,0 +1,894 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import GameBoard from "../../components/GameBoard.astro";
+---
+
+<BaseLayout title="Tetris Sprint 40L" sideBarActiveItemID="game">
+  <div id="tt">
+    <div id="ttRow">
+      <div class="tt-l">
+        <canvas id="ttHold"></canvas>
+        <div id="ttTop" class="tt-top">
+          <div class="tt-top-h">TOP 5</div>
+          <ol id="ttTopList"></ol>
+        </div>
+      </div>
+      <div id="ttStage">
+        <canvas id="ttBoard"></canvas>
+        <div id="ttCap"></div>
+        <div id="ttEnd" hidden></div>
+        <div id="ttNotice" hidden>
+          <p>키보드가 필요한 게임입니다</p>
+          <button id="ttAnyway" type="button">그래도 하기</button>
+        </div>
+      </div>
+      <div class="tt-r">
+        <canvas id="ttQueue"></canvas>
+        <div id="ttInfo">
+          <div id="ttRemain">40</div>
+          <div class="tt-info-s">lines remaining</div>
+          <div class="tt-info-s" id="ttRestartHint">F4 to restart</div>
+        </div>
+      </div>
+    </div>
+    <div id="ttBelow">
+      <div id="ttBtns">
+        <button id="ttSetBtn" type="button">Settings</button>
+        <button id="ttNew" type="button">New game</button>
+      </div>
+      <div id="ttStats">
+        <div><span>Time</span><b id="sTime">0.000</b></div>
+        <div><span>Attack</span><b id="sAtk">0</b></div>
+        <div><span>Finesse</span><b id="sFin">0</b></div>
+        <div><span>PPS</span><b id="sPps">0.00</b></div>
+        <div><span>KPP</span><b id="sKpp">0.00</b></div>
+        <div><span>#</span><b id="sPcs">0</b></div>
+      </div>
+      <div id="ttPad" hidden>
+        <button data-a="hold">HOLD</button>
+        <button data-a="ccw">CCW</button>
+        <button data-a="r180">180</button>
+        <button data-a="cw">CW</button>
+        <button data-a="restart">R</button>
+        <button data-a="left">&larr;</button>
+        <button data-a="sd">&darr;</button>
+        <button data-a="right">&rarr;</button>
+        <button data-a="hd" class="tt-wide">DROP</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="ttSet" hidden>
+    <div id="ttSetBox" role="dialog" aria-label="Settings">
+      <h3>Settings</h3>
+      <p class="tt-sub">Controls &mdash; click on a box and press the key you want.</p>
+      <div id="ttKeys"></div>
+      <h4>Handling</h4>
+      <div class="tt-hand">
+        <label>DAS <input id="ttDas" type="number" min="0" max="4999" step="1" /> ms</label>
+        <label>ARR <input id="ttArr" type="number" min="0" max="4999" step="1" /> ms</label>
+        <label>Soft drop speed
+          <select id="ttSdf">
+            <option value="0">Slow</option>
+            <option value="1">Medium</option>
+            <option value="2">Fast</option>
+            <option value="3">Ultra</option>
+            <option value="4">Instant</option>
+          </select>
+        </label>
+      </div>
+      <div class="tt-setbtns">
+        <button id="ttReset" type="button">Reset all</button>
+        <button id="ttSave" type="button">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <GameBoard />
+</BaseLayout>
+
+<style is:global>
+  footer.footer { display: none; }
+  @media (max-width: 640px) {
+    main:has(#tt) { padding: 10px 12px 12px !important; }
+  }
+</style>
+
+<style is:global>
+  #tt {
+    --bg: #FEFDFA; --panel: #F7F6F0; --line: #EAEAE2; --ink: #23281E;
+    --green: #2F8A25; --bright: #55B93E; --pale: #EAF6E4; --red: #C4442A; --yellow: #D9A520;
+    display: flex; flex-direction: column; align-items: center;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+    user-select: none; -webkit-user-select: none;
+  }
+  #ttRow { display: flex; align-items: flex-start; gap: 10px; }
+  .tt-l, .tt-r { display: flex; flex-direction: column; gap: 10px; }
+  #tt canvas { display: block; }
+  #ttStage { position: relative; border: 2px solid var(--ink); line-height: 0; }
+  #ttCap {
+    position: absolute; left: 0; right: 0; text-align: center;
+    font-weight: 800; color: var(--yellow); line-height: 1.1;
+    pointer-events: none; letter-spacing: 0.02em;
+    text-shadow: 0 2px 0 rgba(0,0,0,0.35);
+  }
+  #ttEnd {
+    position: absolute; inset: 0; line-height: 1.35;
+    background: rgba(35, 40, 30, 0.86); color: var(--bg);
+    display: flex; flex-direction: column; align-items: center;
+    padding: 14% 8px 8px; text-align: center; gap: 4px;
+    animation: ttDrop 0.45s ease-out;
+  }
+  #ttEnd[hidden], #ttNotice[hidden], #ttPad[hidden], #ttSet[hidden] { display: none; }
+  @keyframes ttDrop { from { transform: translateY(-14px); opacity: 0; } to { transform: none; opacity: 1; } }
+  #ttEnd .e-ok { color: var(--bright); font-weight: 700; font-size: 1.1em; }
+  #ttEnd .e-time { font-size: 2.2em; font-weight: 800; color: #F6F3DA; }
+  #ttEnd .e-pb { color: var(--yellow); font-weight: 800; font-size: 1.05em; margin-top: 4px; }
+  #ttEnd .e-note { font-size: 0.78em; opacity: 0.85; max-width: 92%; }
+  #ttEnd .e-top { margin-top: 10px; width: 80%; font-size: 0.85em; }
+  #ttEnd .e-top div { display: flex; justify-content: space-between; }
+  #ttEnd .e-top .me { color: var(--yellow); }
+  #ttEnd .e-hint { margin-top: auto; font-size: 0.75em; opacity: 0.7; }
+  #ttNotice {
+    position: absolute; inset: 0; line-height: 1.4;
+    background: rgba(35, 40, 30, 0.9); color: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    text-align: center; padding: 12px;
+  }
+  #ttNotice p { margin: 0; font-weight: 700; }
+  #tt button, #ttSet button { font: inherit; cursor: pointer; }
+  #ttNotice button, #ttBtns button, .tt-setbtns button {
+    background: var(--panel); color: var(--ink); border: 2px solid var(--ink);
+    padding: 4px 14px; font-weight: 700; font-size: 14px; line-height: 1.4;
+  }
+  #ttNotice button { background: var(--green); color: #fff; border-color: var(--bg); }
+  #ttBtns button:hover, .tt-setbtns button:hover { background: var(--pale); }
+  #ttInfo { text-align: center; line-height: 1.25; padding-top: 6px; }
+  #ttRemain { font-size: 44px; font-weight: 800; }
+  .tt-info-s { font-size: 13px; color: #5d6356; }
+  .tt-top { font-size: 12px; line-height: 1.45; }
+  .tt-top-h { font-weight: 800; color: var(--green); margin-bottom: 2px; }
+  .tt-top ol { margin: 0; padding: 0; list-style: none; }
+  .tt-top li { display: flex; justify-content: space-between; gap: 4px; }
+  .tt-top li span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tt-top .empty { color: #8a8f82; }
+  #ttBelow { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 10px; width: 100%; }
+  #ttBtns { display: flex; gap: 8px; }
+  #ttStats {
+    display: grid; grid-template-columns: repeat(3, auto); column-gap: 26px; row-gap: 2px;
+    font-size: 14px; line-height: 1.4;
+  }
+  #ttStats div { display: flex; justify-content: space-between; gap: 12px; min-width: 104px; }
+  #ttStats span { color: #5d6356; }
+  #ttPad {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; width: 100%; max-width: 380px;
+    touch-action: none;
+  }
+  #ttPad button {
+    height: 50px; background: var(--panel); border: 2px solid var(--ink); color: var(--ink);
+    font-weight: 800; font-size: 15px; touch-action: none; -webkit-tap-highlight-color: transparent;
+    border-radius: 6px;
+  }
+  #ttPad button.down { background: var(--pale); border-color: var(--green); }
+  #ttPad .tt-wide { grid-column: span 2; background: var(--green); color: #fff; }
+  #ttPad .tt-wide.down { background: var(--bright); }
+  #ttSet {
+    position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
+    background: rgba(35, 40, 30, 0.4); padding: 12px;
+  }
+  #ttSetBox {
+    background: var(--bg); border: 3px solid var(--ink); padding: 16px 20px; width: 100%; max-width: 430px;
+    max-height: 100%; overflow: auto; color: var(--ink); font-size: 14px; line-height: 1.4;
+    --ink: #23281E; --bg: #FEFDFA; --panel: #F7F6F0; --pale: #EAF6E4; --green: #2F8A25;
+  }
+  #ttSetBox h3 { margin: 0 0 4px; font-size: 18px; font-weight: 800; color: var(--green); }
+  #ttSetBox h4 { margin: 14px 0 6px; font-size: 14px; font-weight: 800; color: var(--green); }
+  #ttSetBox .tt-sub { margin: 0 0 10px; color: #5d6356; font-size: 13px; }
+  #ttKeys { display: grid; grid-template-columns: 1fr auto; gap: 5px 12px; align-items: center; }
+  #ttKeys button {
+    min-width: 120px; background: var(--panel); border: 2px solid var(--ink); padding: 3px 8px;
+    font-weight: 700; font-size: 13px; color: var(--ink);
+  }
+  #ttKeys button.wait { background: #FFF6D8; border-color: #D9A520; }
+  #ttSetBox .tt-hand { display: flex; flex-direction: column; gap: 6px; }
+  #ttSetBox .tt-hand input, #ttSetBox .tt-hand select {
+    width: 80px; border: 2px solid var(--ink); background: #fff; padding: 2px 6px; font: inherit; color: var(--ink);
+  }
+  #ttSetBox .tt-hand select { width: auto; }
+  #ttSetBox .tt-setbtns { display: flex; justify-content: space-between; margin-top: 16px; }
+  #ttSetBox .tt-setbtns #ttSave { background: var(--green); color: #fff; }
+  @media (max-width: 640px) {
+    #ttRow { gap: 6px; }
+    .tt-l, .tt-r { gap: 6px; }
+    #ttTop { display: none; }
+    #ttRemain { font-size: 28px; }
+    .tt-info-s { font-size: 10px; }
+    #ttStats { column-gap: 12px; font-size: 12px; }
+    #ttStats div { min-width: 86px; gap: 6px; }
+    #ttBelow { gap: 6px; margin-top: 6px; }
+    #ttBtns button { font-size: 12px; padding: 2px 10px; }
+  }
+</style>
+
+<script is:inline data-astro-rerun>
+// Tetris Sprint 40L — Jstris 싱글 Sprint를 최대한 그대로 옮긴 것.
+// 규칙: SRS + Jstris 180 킥, 7-bag, 홀드, 넥스트 5, 고스트, 중력 Lv1(0.9s),
+// 락 딜레이 500/5000/20000ms(이동 횟수 제한 없음), 시간 기반 DAS/ARR, READY/GO 1.8초.
+// ViewTransitions: 페이지 재방문마다 다시 돌고(data-astro-rerun), 떠날 때 정리한다.
+(() => {
+const $ = id => document.getElementById(id);
+const ac = new AbortController();
+let dead = false, raf = 0;
+document.addEventListener('astro:before-swap', () => {
+  dead = true; ac.abort(); cancelAnimationFrame(raf);
+}, { once: true });
+const on = (t, ev, fn, o) => t.addEventListener(ev, fn, Object.assign({ signal: ac.signal }, o));
+const TB = window.TurtleBoard;
+const now = () => performance.now();
+
+// ── 설정 ─────────────────────────────────────────────────
+const ACTIONS = [
+  ['left', 'Move Left'], ['right', 'Move Right'], ['sd', 'Soft Drop'], ['hd', 'Hard Drop'],
+  ['ccw', 'Rotate Left'], ['cw', 'Rotate Right'], ['r180', 'Rotate 180'], ['hold', 'Hold'],
+  ['restart', 'Restart'],
+];
+const DEFAULTS = {
+  keys: { left: 'ArrowLeft', right: 'ArrowRight', sd: 'ArrowDown', hd: 'Shift', ccw: 'KeyZ',
+          cw: 'Space', r180: 'KeyA', hold: 'KeyQ', restart: 'F4' },
+  das: 117, arr: 40, sdf: 2,   // 사용자 Jstris DAS 그대로. ARR 0(벽까지 순간이동)만 40ms 한 칸씩으로 바꿨다
+};
+// 소프트드롭: Jstris는 프레임마다 1+extra칸. 60Hz 기준으로 시간화했다.
+const FRAME = 1000 / 60;
+const SDF = [
+  { iv: 50, n: 1 },      // Slow
+  { iv: FRAME, n: 1 },   // Medium
+  { iv: FRAME, n: 2 },   // Fast (기본)
+  { iv: FRAME, n: 3 },   // Ultra
+  { iv: FRAME, n: 21 },  // Instant
+];
+const SKEY = 'turtle-tetris-settings-v3', OLDSKEYS = ['turtle-tetris-settings-v2', 'turtle-tetris-settings'], PBKEY = 'turtle-tetris-pb';
+const clone = o => JSON.parse(JSON.stringify(o));
+let S = clone(DEFAULTS);
+// 기본 핸들링(DEFAULTS.das·arr)을 바꾸면 HV를 올린다 — hv가 다른 저장은 키 배치만 살리고 DAS/ARR/SDF는 새 기본값으로
+const HV = 5;
+try {
+  const s = [SKEY].concat(OLDSKEYS).map(k => JSON.parse(localStorage.getItem(k))).find(Boolean);
+  if (s) {
+    S.keys = Object.assign({}, DEFAULTS.keys, s.keys || {});
+    if (s.hv === HV) {
+      if (Number.isFinite(s.das)) S.das = s.das;
+      if (Number.isFinite(s.arr)) S.arr = s.arr;
+      if (s.sdf >= 0 && s.sdf <= 4) S.sdf = s.sdf;
+    }
+  }
+} catch (e) {}
+function saveSettings() { try { localStorage.setItem(SKEY, JSON.stringify(Object.assign({ hv: HV }, S))); } catch (e) {} }
+
+function norm(code) {
+  if (/^Shift/.test(code)) return 'Shift';
+  if (/^Control/.test(code)) return 'Ctrl';
+  if (/^Alt/.test(code)) return 'Alt';
+  if (/^Meta/.test(code)) return 'Meta';
+  return code;
+}
+function keyName(c) {
+  if (!c) return '(none)';
+  const m = { ArrowLeft: 'Left arrow', ArrowRight: 'Right arrow', ArrowUp: 'Up arrow', ArrowDown: 'Down arrow',
+              Space: 'Space', Shift: 'Shift', Ctrl: 'Ctrl', Alt: 'Alt', Meta: 'Meta', Enter: 'Enter',
+              Backquote: '`', Minus: '-', Equal: '=', BracketLeft: '[', BracketRight: ']', Backslash: '\\',
+              Semicolon: ';', Quote: "'", Comma: ',', Period: '.', Slash: '/', Tab: 'Tab', CapsLock: 'Caps Lock' };
+  if (m[c]) return m[c];
+  if (/^Key[A-Z]$/.test(c)) return c.slice(3);
+  if (/^Digit\d$/.test(c)) return c.slice(5);
+  if (/^Numpad/.test(c)) return 'Num ' + c.slice(6);
+  return c;
+}
+function actionOf(code) {
+  for (const [a] of ACTIONS) if (S.keys[a] === code) return a;
+  return null;
+}
+
+// ── 조각 · SRS ───────────────────────────────────────────
+// id: I0 O1 T2 L3 J4 S5 Z6 (Jstris 순서)
+const COLORS = ['#3E9BC2', '#D9A520', '#9C4F9A', '#D97A2B', '#3F5FB0', '#55B93E', '#C4442A'];
+const BASE = [
+  { n: 4, c: [[0,1],[1,1],[2,1],[3,1]] },        // I
+  { n: 4, c: [[1,0],[2,0],[1,1],[2,1]] },        // O
+  { n: 3, c: [[1,0],[0,1],[1,1],[2,1]] },        // T
+  { n: 3, c: [[2,0],[0,1],[1,1],[2,1]] },        // L
+  { n: 3, c: [[0,0],[0,1],[1,1],[2,1]] },        // J
+  { n: 3, c: [[1,0],[2,0],[0,1],[1,1]] },        // S
+  { n: 3, c: [[0,0],[1,0],[1,1],[2,1]] },        // Z
+];
+const SHAPES = BASE.map((b, id) => {
+  const st = [b.c];
+  for (let r = 1; r < 4; r++) st.push(id === 1 ? b.c : st[r - 1].map(([x, y]) => [b.n - 1 - y, x]));
+  return st;
+});
+// 킥: [현재 상태][방향] → (dx, dy), dy 양수 = 위
+const KJ = [
+  { cw: [[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]], ccw: [[0,0],[1,0],[1,1],[0,-2],[1,-2]], r180: [[0,0],[0,1]] },
+  { cw: [[0,0],[1,0],[1,-1],[0,2],[1,2]],     ccw: [[0,0],[1,0],[1,-1],[0,2],[1,2]],  r180: [[0,0],[1,0]] },
+  { cw: [[0,0],[1,0],[1,1],[0,-2],[1,-2]],    ccw: [[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]], r180: [[0,0],[0,-1]] },
+  { cw: [[0,0],[-1,0],[-1,-1],[0,2],[-1,2]],  ccw: [[0,0],[-1,0],[-1,-1],[0,2],[-1,2]], r180: [[0,0],[-1,0]] },
+];
+const KI = [
+  { cw: [[0,0],[-2,0],[1,0],[-2,-1],[1,2]], ccw: [[0,0],[-1,0],[2,0],[-1,2],[2,-1]], r180: [[0,0],[0,1]] },
+  { cw: [[0,0],[-1,0],[2,0],[-1,2],[2,-1]], ccw: [[0,0],[2,0],[-1,0],[2,1],[-1,-2]], r180: [[0,0],[1,0]] },
+  { cw: [[0,0],[2,0],[-1,0],[2,1],[-1,-2]], ccw: [[0,0],[1,0],[-2,0],[1,-2],[-2,1]], r180: [[0,0],[0,-1]] },
+  { cw: [[0,0],[1,0],[-2,0],[1,-2],[-2,1]], ccw: [[0,0],[-2,0],[1,0],[-2,-1],[1,2]], r180: [[0,0],[-1,0]] },
+];
+const KO = { cw: [[0,0]], ccw: [[0,0]], r180: [[0,0]] };
+const kicks = (id, r, dir) => id === 1 ? KO[dir] : (id === 0 ? KI : KJ)[r][dir];
+const ROT = { cw: 1, ccw: 3, r180: 2 };
+
+// ── 판 ───────────────────────────────────────────────────
+// M[0] = 숨은 줄(y=-1, 충돌 없음), M[y+1] = 보이는 줄 y(0..19)
+let M;
+const emptyRow = () => new Array(10).fill(0);
+function collideOn(B, id, r, x, y) {
+  for (const [cx, cy] of SHAPES[id][r]) {
+    const X = x + cx, Y = y + cy;
+    if (X < 0 || X > 9 || Y > 19) return true;
+    if (Y >= 0 && B && B[Y + 1][X]) return true;
+  }
+  return false;
+}
+const collide = (id, r, x, y) => collideOn(M, id, r, x, y);
+
+// ── 피네스 최적표 (빈 판에서 다익스트라로 계산 — Jstris 방식: [조각][회전][최좌측 x], 180 = 2입력) ──
+const FIN = SHAPES.map((_, id) => {
+  const dist = new Map(), best = {};
+  const k = (x, r) => x + ',' + r;
+  const q = [[3, -1, 0, 0]];
+  dist.set(k(3, 0), 0);
+  while (q.length) {
+    q.sort((a, b) => a[3] - b[3]);
+    const [x, y, r, d] = q.shift();
+    if (d > dist.get(k(x, r))) continue;
+    const nexts = [];
+    if (!collideOn(null, id, r, x - 1, y)) nexts.push([x - 1, y, r, 1]);
+    if (!collideOn(null, id, r, x + 1, y)) nexts.push([x + 1, y, r, 1]);
+    let w = x; while (!collideOn(null, id, r, w - 1, y)) w--; nexts.push([w, y, r, 1]);
+    w = x; while (!collideOn(null, id, r, w + 1, y)) w++; nexts.push([w, y, r, 1]);
+    for (const dir of ['cw', 'ccw', 'r180']) {
+      const nr = (r + ROT[dir]) % 4;
+      for (const [dx, dy] of kicks(id, r, dir)) {
+        if (!collideOn(null, id, nr, x + dx, y - dy)) { nexts.push([x + dx, y - dy, nr, dir === 'r180' ? 2 : 1]); break; }
+      }
+    }
+    for (const [nx, ny, nr, c] of nexts) {
+      const nd = d + c, kk = k(nx, nr);
+      if (!dist.has(kk) || nd < dist.get(kk)) { dist.set(kk, nd); q.push([nx, ny, nr, nd]); }
+    }
+  }
+  for (const [kk, d] of dist) {
+    const [x, r] = kk.split(',').map(Number);
+    const rr = id === 1 ? 0 : r;
+    const left = x + Math.min(...SHAPES[id][r].map(c => c[0]));
+    const key = rr + ',' + left;
+    if (!(key in best) || d < best[key]) best[key] = d;
+  }
+  return best;
+});
+
+// ── 상태 ─────────────────────────────────────────────────
+let state = 'idle';                 // idle | countdown | play | done | over
+let cdStart = 0, startTime = 0, endTime = 0;
+let p = null, holdId = null, holdUsed = false, queue = [], bag = [];
+let lastGrav = 0, lastAction = 0, lockActive = false, lockStart = 0, spawnTime = 0, spin = false;
+let lines = 0, pieces = 0, keys = 0, attack = 0, finesse = 0, pf = 0, b2b = false, combo = -1;
+const held = { left: false, right: false, sd: false };
+let dir = 0, dirStart = 0, charged = false, arrLast = 0, sdLast = 0;
+let finalMs = 0;
+const GOAL = 40;
+
+function nextFromBag() {
+  if (!bag.length) {
+    bag = [0, 1, 2, 3, 4, 5, 6];
+    for (let i = 6; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [bag[i], bag[j]] = [bag[j], bag[i]]; }
+  }
+  return bag.shift();
+}
+function fillQueue() { while (queue.length < 5) queue.push(nextFromBag()); }
+
+function resetBoard() {
+  M = []; for (let i = 0; i < 21; i++) M.push(emptyRow());
+  p = null; holdId = null; holdUsed = false; queue = []; bag = [];
+  lines = pieces = keys = attack = finesse = pf = 0; b2b = false; combo = -1;
+}
+
+function newGame() {
+  resetBoard();
+  state = 'countdown';
+  cdStart = now();
+  finalMs = 0;
+  $('ttEnd').hidden = true;
+  draw();
+}
+
+function beginPlay(t) {
+  state = 'play';
+  startTime = t;
+  fillQueue();
+  spawn(queue.shift(), t);
+}
+
+function spawn(id, t) {
+  fillQueue();
+  p = { id, x: 3, y: -1, r: 0 };
+  spawnTime = t; lastGrav = t; lastAction = t; lockActive = false; spin = false; pf = 0;
+  if (collide(p.id, p.r, p.x, p.y)) { gameOver(t); return; }
+  // DAS 유지: 충전된 방향이 눌려 있으면 새 조각도 바로 밀린다
+  if (dir && charged) {
+    if (S.arr === 0) toWall(dir, t); else { shift(dir, t); arrLast = t; }
+  }
+}
+
+function shift(d, t) {
+  if (!p || collide(p.id, p.r, p.x + d, p.y)) return false;
+  p.x += d; lastAction = t; return true;
+}
+function toWall(d, t) { let m = false; while (shift(d, t)) m = true; return m; }
+function fall(n, t) {
+  let m = false;
+  for (let i = 0; i < n; i++) {
+    if (collide(p.id, p.r, p.x, p.y + 1)) break;
+    p.y++; m = true;
+  }
+  if (m) { lockActive = false; spin = false; }
+  return m;
+}
+function rotate(dirName, t) {
+  if (!p) return;
+  const nr = (p.r + ROT[dirName]) % 4;
+  for (const [dx, dy] of kicks(p.id, p.r, dirName)) {
+    if (!collide(p.id, nr, p.x + dx, p.y - dy)) {
+      p.x += dx; p.y -= dy; p.r = nr; lastAction = t;
+      if (dy > 0) lockActive = false;
+      spin = p.id === 2;
+      return;
+    }
+  }
+}
+function hardDrop(t) {
+  if (!p) return;
+  let d = 0;
+  while (!collide(p.id, p.r, p.x, p.y + 1)) { p.y++; d++; }
+  if (d > 0) spin = false;
+  lock(t);
+}
+function doHold(t) {
+  if (!p || holdUsed) return;
+  const cur = p.id;
+  if (holdId === null) { holdId = cur; spawn(queue.shift(), t); }
+  else { const h = holdId; holdId = cur; spawn(h, t); }
+  holdUsed = true;
+}
+
+function filled(x, y) {
+  if (x < 0 || x > 9 || y > 19) return true;
+  if (y < 0) return false;
+  return !!M[y + 1][x];
+}
+const FRONT = [[[0,0],[2,0]], [[2,0],[2,2]], [[0,2],[2,2]], [[0,0],[0,2]]];
+const ALL4 = [[0,0],[2,0],[0,2],[2,2]];
+const COMBO = [0, 0, 1, 1, 1, 2, 2, 3, 3, 4, 4, 4, 5];
+
+function lock(t) {
+  // T-spin (3코너)
+  let ts = 0; // 0 없음, 1 미니, 2 풀
+  if (p.id === 2 && spin) {
+    const front = FRONT[p.r].filter(([cx, cy]) => filled(p.x + cx, p.y + cy)).length;
+    const total = ALL4.filter(([cx, cy]) => filled(p.x + cx, p.y + cy)).length;
+    const back = total - front;
+    if (front === 2 && back >= 1) ts = 2;
+    else if (front === 1 && back === 2) ts = 1;
+  }
+  // 피네스
+  const left = p.x + Math.min(...SHAPES[p.id][p.r].map(c => c[0]));
+  const opt = FIN[p.id][(p.id === 1 ? 0 : p.r) + ',' + left];
+  if (opt !== undefined && pf > opt) finesse += pf - opt;
+  // 놓기
+  for (const [cx, cy] of SHAPES[p.id][p.r]) {
+    const X = p.x + cx, Y = p.y + cy;
+    if (Y >= -1) M[Y + 1][X] = p.id + 1;
+  }
+  pieces++;
+  // 줄 지우기
+  let n = 0;
+  for (let i = 20; i >= 1; i--) {
+    if (M[i].every(v => v)) { M.splice(i, 1); n++; i++; M.unshift(emptyRow()); }
+  }
+  // 공격
+  if (n > 0) {
+    let atk;
+    if (ts === 2 || (ts === 1 && n >= 2)) atk = [0, 2, 4, 6][Math.min(n, 3)];
+    else if (ts === 1) atk = 0;
+    else atk = [0, 0, 1, 2, 4][Math.min(n, 4)];
+    const hard = n >= 4 || ts > 0;
+    if (hard) { if (b2b && !(ts === 1 && n === 1)) atk += 1; b2b = true; }
+    else b2b = false;
+    combo++;
+    let pc = true;
+    for (let i = 0; i <= 20 && pc; i++) if (M[i].some(v => v)) pc = false;
+    if (pc) atk = 10;
+    attack += atk + COMBO[Math.min(combo, 12)];
+    lines += n;
+  } else combo = -1;
+  p = null;
+  if (lines >= GOAL) { finish(t); return; }
+  holdUsed = false;
+  spawn(queue.shift(), t);
+}
+
+function gameOver(t) { state = 'over'; endTime = t; p = null; }
+
+// ── 입력 파이프라인 (키보드·가상 패드 공용) ─────────────────
+function press(a) {
+  const t = now();
+  if (a === 'restart') { newGame(); return; }
+  if (a === 'left' || a === 'right') {
+    const d = a === 'left' ? -1 : 1;
+    held[a] = true;
+    dir = d; dirStart = t; charged = false;
+    if (state === 'play' && p) { keys++; pf++; shift(d, t); }
+    return;
+  }
+  if (a === 'sd') {
+    held.sd = true; sdLast = t;
+    if (state === 'play' && p && fall(SDF[S.sdf].n, t)) lastGrav = t;
+    return;
+  }
+  if (state !== 'play' || !p) return;
+  if (a === 'hd') { hardDrop(t); return; }
+  if (a === 'cw' || a === 'ccw') { keys++; pf++; rotate(a, t); return; }
+  if (a === 'r180') { keys++; pf += 2; rotate('r180', t); return; }
+  if (a === 'hold') { if (!holdUsed) keys++; doHold(t); return; }
+}
+function release(a) {
+  const t = now();
+  if (a === 'left' || a === 'right') {
+    held[a] = false;
+    const d = a === 'left' ? -1 : 1;
+    if (dir === d) {
+      const other = a === 'left' ? 'right' : 'left';
+      if (held[other]) { dir = -d; dirStart = t; charged = false; }
+      else { dir = 0; charged = false; }
+    }
+    return;
+  }
+  if (a === 'sd') held.sd = false;
+}
+function releaseAll() {
+  held.left = held.right = held.sd = false; dir = 0; charged = false;
+  document.querySelectorAll('#ttPad button.down').forEach(b => b.classList.remove('down'));
+}
+
+function update(t) {
+  if (state === 'countdown') {
+    if (t - cdStart >= 1800) beginPlay(cdStart + 1800);
+    else return;
+  }
+  if (state !== 'play' || !p) return;
+  // DAS / ARR (시간 기반)
+  if (dir) {
+    if (!charged && t - dirStart >= S.das) {
+      charged = true; arrLast = dirStart + S.das;
+      if (S.arr === 0) toWall(dir, t); else shift(dir, t);
+    }
+    if (charged) {
+      if (S.arr === 0) toWall(dir, t);
+      else { let g = 0; while (t - arrLast >= S.arr && g++ < 20) { shift(dir, t); arrLast += S.arr; } }
+    }
+  }
+  // 소프트드롭
+  if (held.sd) {
+    const sd = SDF[S.sdf];
+    let g = 0;
+    while (t - sdLast >= sd.iv && g++ < 30) { if (fall(sd.n, t)) lastGrav = t; sdLast += sd.iv; }
+  }
+  // 중력 Lv1 = 0.9 s/줄
+  let g = 0;
+  while (t - lastGrav >= 900 && g++ < 25) {
+    if (!fall(1, t)) { lastGrav = t; break; }
+    lastGrav += 900;
+  }
+  // 락 딜레이 500 / 5000 / 20000
+  if (collide(p.id, p.r, p.x, p.y + 1)) {
+    if (!lockActive) { lockActive = true; lockStart = t; lastAction = Math.max(lastAction, t); }
+    if (t - lastAction >= 500 || t - lockStart >= 5000 || t - spawnTime >= 20000) lock(t);
+  }
+}
+
+// ── 끝 화면 · 기록 ───────────────────────────────────────
+const fmt = ms => TB ? TB.fmtTime(ms) : (ms / 1000).toFixed(3);
+function ago(ts) {
+  const s = Math.max(0, (Date.now() - ts) / 1000);
+  if (s < 60) return 'just now';
+  const u = [[86400 * 365, 'year'], [86400 * 30, 'month'], [86400, 'day'], [3600, 'hour'], [60, 'minute']];
+  for (const [sec, name] of u) if (s >= sec) { const n = Math.floor(s / sec); return n + ' ' + name + (n > 1 ? 's' : '') + ' ago'; }
+  return 'just now';
+}
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+let topList = [], myMark = null;
+function topHtml(list, row) {
+  if (!list.length) return row('<span class="empty">-</span>', '');
+  return list.map((r, i) => row(esc((i + 1) + '. ' + r.name), fmt(r.value), myMark && r.value === myMark.value && r.name === myMark.name)).join('');
+}
+function renderTop() {
+  $('ttTopList').innerHTML = topHtml(topList, (a, b, me) => '<li' + (me ? ' style="color:#2F8A25;font-weight:700"' : '') + '><span>' + a + '</span><span>' + b + '</span></li>');
+  const box = document.querySelector('#ttEnd .e-top');
+  if (box) box.innerHTML = '<div style="justify-content:center;color:#55B93E;font-weight:700">TOP 5</div>' +
+    topHtml(topList, (a, b, me) => '<div' + (me ? ' class="me"' : '') + '><span>' + a + '</span><span>' + b + '</span></div>');
+}
+async function loadTop() { if (!TB) return; try { topList = await TB.top('tetris'); } catch (e) { topList = []; } renderTop(); }
+
+async function finish(t) {
+  state = 'done'; endTime = t;
+  const ms = Math.round(t - startTime);
+  finalMs = ms;
+  releaseAll();
+  let prev = null;
+  try { prev = JSON.parse(localStorage.getItem(PBKEY)); } catch (e) {}
+  let pbHtml;
+  if (!prev || !Number.isFinite(prev.ms)) {
+    pbHtml = '<div class="e-note">This was your first game in this mode.</div>';
+    try { localStorage.setItem(PBKEY, JSON.stringify({ ms, at: Date.now() })); } catch (e) {}
+  } else if (ms < prev.ms) {
+    pbHtml = '<div class="e-pb">YOUR NEW PERSONAL BEST</div>' +
+      '<div class="e-note">Your previous record was ' + fmt(prev.ms) + ' achieved ' + ago(prev.at) +
+      '. The improvement is ' + fmt(prev.ms - ms) + '.</div>';
+    try { localStorage.setItem(PBKEY, JSON.stringify({ ms, at: Date.now() })); } catch (e) {}
+  } else {
+    pbHtml = '<div class="e-note">Personal best: ' + fmt(prev.ms) + '</div>';
+  }
+  const end = $('ttEnd');
+  end.innerHTML = '<div class="e-ok">&#10003; Completed</div><div class="e-time">' + fmt(ms) + '</div>' + pbHtml +
+    '<div class="e-top"></div><div class="e-hint">' + esc(keyName(S.keys.restart)) + ' / New game to retry</div>';
+  end.hidden = false;
+  renderTop();
+  if (!TB) return;
+  try {
+    const list = await TB.top('tetris');
+    topList = list; renderTop();
+    if (dead || finalMs !== ms || state !== 'done') return;
+    if (TB.qualifies(list, ms, 'tetris')) {
+      const name = await TB.askName('TOP 5! ' + fmt(ms));
+      await TB.submit('tetris', name, ms);
+      myMark = { name, value: ms };
+      await loadTop();
+    }
+  } catch (e) {}
+}
+
+// ── 그리기 ───────────────────────────────────────────────
+const cvB = $('ttBoard'), cvH = $('ttHold'), cvQ = $('ttQueue');
+const xB = cvB.getContext('2d'), xH = cvH.getContext('2d'), xQ = cvQ.getContext('2d');
+const BG = '#23281E', GRID = '#30362A';
+let C = 24, PC = 18, SIDE = 96, SLOT = 64;
+
+function cell(x2, px, py, s, color, alpha) {
+  x2.globalAlpha = alpha == null ? 1 : alpha;
+  x2.fillStyle = color;
+  x2.fillRect(px, py, s, s);
+  if (alpha == null) {
+    const b = Math.max(1, Math.round(s * 0.12));
+    x2.fillStyle = 'rgba(255,255,255,0.18)'; x2.fillRect(px, py, s, b);
+    x2.fillStyle = 'rgba(0,0,0,0.18)'; x2.fillRect(px, py + s - b, s, b);
+  }
+  x2.globalAlpha = 1;
+}
+function draw() {
+  const W = C * 10, H = C * 20;
+  xB.fillStyle = BG; xB.fillRect(0, 0, W, H);
+  xB.fillStyle = GRID;
+  for (let i = 1; i < 10; i++) xB.fillRect(i * C, 0, 1, H);
+  for (let j = 1; j < 20; j++) xB.fillRect(0, j * C, W, 1);
+  const grey = state === 'over';
+  for (let y = 0; y < 20; y++) for (let x = 0; x < 10; x++) {
+    const v = M[y + 1][x];
+    if (v) cell(xB, x * C, y * C, C, grey ? '#6E7368' : COLORS[v - 1]);
+  }
+  if (p) {
+    let gy = p.y; while (!collide(p.id, p.r, p.x, gy + 1)) gy++;
+    for (const [cx, cy] of SHAPES[p.id][p.r]) if (gy + cy >= 0) cell(xB, (p.x + cx) * C, (gy + cy) * C, C, COLORS[p.id], 0.3);
+    for (const [cx, cy] of SHAPES[p.id][p.r]) if (p.y + cy >= 0) cell(xB, (p.x + cx) * C, (p.y + cy) * C, C, COLORS[p.id]);
+  }
+  // 홀드
+  xH.fillStyle = BG; xH.fillRect(0, 0, SIDE, SLOT);
+  if (holdId !== null) mini(xH, holdId, 0);
+  // 넥스트 5
+  xQ.fillStyle = BG; xQ.fillRect(0, 0, SIDE, SLOT * 5);
+  if (state === 'play' || state === 'done' || state === 'over') for (let i = 0; i < 5 && i < queue.length; i++) mini(xQ, queue[i], i * SLOT);
+  // 캡션
+  const cap = $('ttCap');
+  if (state === 'countdown') {
+    const txt = now() - cdStart < 900 ? 'READY' : 'GO!';
+    if (cap.textContent !== txt) cap.textContent = txt;
+  } else if (cap.textContent) cap.textContent = '';
+  // 통계
+  const el = state === 'play' ? now() - startTime : (state === 'done' ? finalMs : (state === 'over' ? endTime - startTime : 0));
+  $('sTime').textContent = fmt(el);
+  $('sAtk').textContent = attack;
+  $('sFin').textContent = finesse;
+  $('sPcs').textContent = pieces;
+  $('sPps').textContent = el > 0 ? (pieces / (el / 1000)).toFixed(2) : '0.00';
+  $('sKpp').textContent = pieces ? ((keys + pieces) / pieces).toFixed(2) : '0.00';
+  $('ttRemain').textContent = Math.max(0, GOAL - lines);
+}
+function mini(x2, id, oy) {
+  const cs = SHAPES[id][0];
+  const xs = cs.map(c => c[0]), ys = cs.map(c => c[1]);
+  const w = Math.max(...xs) - Math.min(...xs) + 1, h = Math.max(...ys) - Math.min(...ys) + 1;
+  const ox = Math.round((SIDE - w * PC) / 2) - Math.min(...xs) * PC;
+  const oy2 = oy + Math.round((SLOT - h * PC) / 2) - Math.min(...ys) * PC;
+  for (const [cx, cy] of cs) cell(x2, ox + cx * PC, oy2 + cy * PC, PC, COLORS[id]);
+}
+
+// ── 화면 맞춤 (DPR 선명) ─────────────────────────────────
+function sizeCanvas(cv, x2, w, h) {
+  const dpr = window.devicePixelRatio || 1;
+  cv.style.width = w + 'px'; cv.style.height = h + 'px';
+  cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+  x2.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+function fit() {
+  const narrow = innerWidth <= 640;
+  const availW = narrow ? innerWidth - 24 : Math.min(innerWidth - 48, 852);
+  const row = $('ttRow');
+  const top = row.getBoundingClientRect().top + scrollY;
+  const below = $('ttBelow').offsetHeight + 14;
+  const availH = innerHeight - top - below - 8;
+  let c = 24;
+  for (; c > 10; c--) {
+    const pc = Math.round(c * (narrow ? 0.6 : 0.78));
+    const side = pc * 5;
+    const gap = narrow ? 6 : 10;
+    if (10 * c + 4 + 2 * side + 2 * gap <= availW && 20 * c + 4 <= availH) break;
+  }
+  C = c; PC = Math.round(c * (narrow ? 0.6 : 0.78)); SIDE = PC * 5; SLOT = Math.round(PC * 3.6);
+  sizeCanvas(cvB, xB, C * 10, C * 20);
+  sizeCanvas(cvH, xH, SIDE, SLOT);
+  sizeCanvas(cvQ, xQ, SIDE, SLOT * 5);
+  document.querySelectorAll('.tt-l, .tt-r').forEach(e => { e.style.width = SIDE + 'px'; });
+  const cap = $('ttCap');
+  cap.style.fontSize = Math.round(31 * C / 24) + 'px';
+  cap.style.top = Math.round(C * 11) + 'px';
+  $('ttEnd').style.fontSize = Math.max(11, Math.round(15 * C / 24)) + 'px';
+  draw();
+}
+
+// ── 키보드 ───────────────────────────────────────────────
+let capturing = null;
+const isTyping = e => e.target && /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName);
+on(window, 'keydown', (e) => {
+  if (TB && TB.isOpen()) return;
+  const code = norm(e.code);
+  if (setOpen) {
+    if (capturing) {
+      e.preventDefault();
+      if (code === 'Escape') { capturing = null; renderKeys(); return; }
+      const other = ACTIONS.find(([a]) => a !== capturing && S.keys[a] === code);
+      if (other) S.keys[other[0]] = S.keys[capturing];
+      S.keys[capturing] = code; capturing = null;
+      saveSettings(); renderKeys(); updateHint();
+      return;
+    }
+    if (code === 'Escape') closeSettings();
+    return;
+  }
+  if (isTyping(e)) return;
+  const a = actionOf(code);
+  if (!a) return;
+  e.preventDefault();
+  if (e.repeat) return;
+  if (padMode === 'blocked') return;
+  press(a);
+});
+on(window, 'keyup', (e) => {
+  if (setOpen) return;
+  const a = actionOf(norm(e.code));
+  if (!a) return;
+  e.preventDefault();
+  release(a);
+});
+on(window, 'blur', releaseAll);
+on(document, 'visibilitychange', () => { if (document.hidden) releaseAll(); });
+
+// ── 가상 패드 (터치) ─────────────────────────────────────
+let padMode = 'off';
+const coarse = window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches;
+document.querySelectorAll('#ttPad button').forEach(b => {
+  const a = b.dataset.a;
+  let pid = null;
+  on(b, 'pointerdown', (e) => {
+    e.preventDefault();
+    if (TB && TB.isOpen()) return;
+    pid = e.pointerId;
+    try { b.setPointerCapture(e.pointerId); } catch (er) {}
+    b.classList.add('down');
+    press(a);
+  });
+  const up = (e) => {
+    if (pid === null || (e && e.pointerId !== pid)) return;
+    pid = null; b.classList.remove('down'); release(a);
+  };
+  on(b, 'pointerup', up); on(b, 'pointercancel', up); on(b, 'lostpointercapture', up);
+  on(b, 'contextmenu', e => e.preventDefault());
+});
+on($('ttAnyway'), 'click', () => {
+  padMode = 'on';
+  $('ttNotice').hidden = true;
+  $('ttPad').hidden = false;
+  fit();
+  newGame();
+});
+
+// ── 설정 창 ──────────────────────────────────────────────
+let setOpen = false;
+function renderKeys() {
+  const box = $('ttKeys');
+  box.innerHTML = '';
+  for (const [a, label] of ACTIONS) {
+    const l = document.createElement('span'); l.textContent = label;
+    const b = document.createElement('button'); b.type = 'button';
+    b.textContent = capturing === a ? 'Press a key...' : keyName(S.keys[a]);
+    if (capturing === a) b.className = 'wait';
+    b.addEventListener('click', () => { capturing = a; renderKeys(); });
+    box.appendChild(l); box.appendChild(b);
+  }
+}
+function renderHandling() {
+  $('ttDas').value = S.das; $('ttArr').value = S.arr; $('ttSdf').value = String(S.sdf);
+}
+function readHandling() {
+  const das = parseInt($('ttDas').value, 10), arr = parseInt($('ttArr').value, 10);
+  if (das >= 0 && das < 5000) S.das = das;
+  if (arr >= 0 && arr < 5000) S.arr = arr;
+  S.sdf = parseInt($('ttSdf').value, 10) || 0;
+}
+function openSettings() {
+  setOpen = true; capturing = null;
+  releaseAll();
+  // 진행 중인 판은 멈춘다(닫으면 새 판)
+  if (state === 'play' || state === 'countdown') { state = 'idle'; p = null; }
+  renderKeys(); renderHandling();
+  $('ttSet').hidden = false;
+}
+function closeSettings() {
+  readHandling(); saveSettings(); updateHint();
+  setOpen = false; capturing = null;
+  $('ttSet').hidden = true;
+  if (state === 'idle' && padMode !== 'blocked') newGame();
+}
+function updateHint() { $('ttRestartHint').textContent = keyName(S.keys.restart) + ' to restart'; }
+on($('ttSetBtn'), 'click', (e) => { e.currentTarget.blur(); openSettings(); });
+on($('ttSave'), 'click', closeSettings);
+on($('ttReset'), 'click', () => { S = clone(DEFAULTS); capturing = null; saveSettings(); renderKeys(); renderHandling(); updateHint(); });
+on($('ttSet'), 'pointerdown', (e) => { if (e.target === $('ttSet')) closeSettings(); });
+on($('ttDas'), 'change', () => { readHandling(); saveSettings(); });
+on($('ttArr'), 'change', () => { readHandling(); saveSettings(); });
+on($('ttSdf'), 'change', () => { readHandling(); saveSettings(); });
+on($('ttNew'), 'click', (e) => { e.currentTarget.blur(); if (padMode !== 'blocked') newGame(); });
+
+// ── 루프 ─────────────────────────────────────────────────
+function frame() {
+  if (dead) return;
+  update(now());
+  draw();
+  raf = requestAnimationFrame(frame);
+}
+
+resetBoard();
+updateHint();
+on(window, 'resize', fit);
+fit();
+requestAnimationFrame(fit);   // 폰트·레이아웃 확정 뒤 한 번 더
+loadTop();
+if (coarse) { padMode = 'blocked'; $('ttNotice').hidden = false; }
+else newGame();
+raf = requestAnimationFrame(frame);
+})();
+</script>

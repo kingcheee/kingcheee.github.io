@@ -1,0 +1,142 @@
+---
+// 네 게임(stack·apple·sudoku·tetris)이 같이 쓰는 TOP 5 리더보드 + 이름 입력창.
+// 게임 스크립트보다 먼저 두면 window.TurtleBoard가 준비된다.
+// 저장소는 Supabase `scores` 표(anon은 읽기·추가만). URL·키가 비어 있으면 localStorage로 대신한다.
+// publishable 키는 공개용이라 페이지에 들어가도 된다 — RLS·권한이 select·insert만 허용한다
+// (표 정의: game in stack|apple|sudoku|tetris, name 1~8자, value >= 0. 지우기는 대시보드에서만).
+---
+
+<div id="tbNameUi">
+  <div id="tbNameBox">
+    <p id="tbNameMsg">TOP 5!</p>
+    <input id="tbNameInput" maxlength="8" placeholder="NAME" autocomplete="off" enterkeyhint="done" />
+    <button id="tbNameOk">OK</button>
+  </div>
+</div>
+
+<style is:global>
+  #tbNameUi {
+    position: fixed; inset: 0; display: none;
+    align-items: center; justify-content: center;
+    background: rgba(35, 40, 30, 0.35); z-index: 60;
+  }
+  #tbNameBox {
+    background: #f7f6f0; border: 3px solid #23281e;
+    padding: 14px 18px; text-align: center;
+    font-family: ui-monospace, monospace;
+  }
+  #tbNameBox p { margin: 0 0 10px; font-weight: bold; color: #23281e; font-size: 15px; }
+  #tbNameInput {
+    width: 130px; font: bold 16px ui-monospace, monospace; text-transform: uppercase;
+    text-align: center; border: 2px solid #23281e; background: #fefdfa;
+    color: #23281e; padding: 4px; outline: none;
+  }
+  #tbNameOk {
+    margin: 10px auto 0; display: block; font: bold 13px ui-monospace, monospace;
+    background: #2f8a25; color: #ffffff; border: 2px solid #23281e;
+    padding: 4px 16px; cursor: pointer;
+  }
+</style>
+
+<script is:inline data-astro-rerun>
+// window.TurtleBoard — 게임 페이지가 쓰는 API
+//   top(game)                  → Promise<[{name, value, created_at}]>  (게임별 정렬·5개)
+//   qualifies(list, value, game) → TOP 5에 드는가
+//   askName(msg?)              → Promise<string>  (이름 입력창. 빈 값이면 '---')
+//   submit(game, name, value)  → Promise<void>
+//   isOpen()                   → 이름 입력창이 떠 있는가 (게임 입력을 막을 때)
+//   fmtTime(ms)                → '1:23.456' 류 (시간 기록 표시용)
+// 정렬: value가 클수록 위(stack·apple 점수) / 작을수록 위(sudoku·tetris 밀리초)
+(() => {
+const SUPABASE_URL = 'https://puzymxpbktiyyqrpcqcg.supabase.co';   // Supabase 프로젝트 kingcheee-games (조직 final, 서울)
+const SUPABASE_KEY = 'sb_publishable_i8Lq_2C1M212LZhRX2nTGA_79prbX0M';  // publishable 키 — 공개용
+const ORDER = { stack: 'desc', apple: 'desc', sudoku: 'asc', tetris: 'asc' };
+const N = 5;
+const configured = !!(SUPABASE_URL && SUPABASE_KEY);
+const hdr = { apikey: SUPABASE_KEY };
+
+const lsKey = g => 'turtle-board-' + g;
+function lsRead(g) {
+  try { return JSON.parse(localStorage.getItem(lsKey(g))) || []; } catch (e) { return []; }
+}
+function sortList(list, g) {
+  const asc = ORDER[g] === 'asc';
+  return list.slice().sort((a, b) => asc ? a.value - b.value : b.value - a.value).slice(0, N);
+}
+
+async function top(g) {
+  if (!configured) return sortList(lsRead(g), g);
+  try {
+    const q = '?select=name,value,created_at&game=eq.' + g +
+              '&order=value.' + ORDER[g] + ',created_at.asc&limit=' + N;
+    const r = await fetch(SUPABASE_URL + '/rest/v1/scores' + q, { headers: hdr });
+    if (!r.ok) throw new Error(r.status);
+    return await r.json();
+  } catch (e) {
+    return [];
+  }
+}
+
+function qualifies(list, value, g) {
+  if (list.length < N) return true;
+  const last = list[list.length - 1].value;
+  return ORDER[g] === 'asc' ? value < last : value > last;
+}
+
+async function submit(g, name, value) {
+  const row = { game: g, name: (name || '---').toUpperCase().slice(0, 8), value };
+  if (!configured) {
+    const list = lsRead(g);
+    list.push(Object.assign({ created_at: new Date().toISOString() }, row));
+    try { localStorage.setItem(lsKey(g), JSON.stringify(sortList(list, g))); } catch (e) {}
+    return;
+  }
+  try {
+    await fetch(SUPABASE_URL + '/rest/v1/scores', {
+      method: 'POST',
+      headers: Object.assign({ 'Content-Type': 'application/json', Prefer: 'return=minimal' }, hdr),
+      body: JSON.stringify(row),
+    });
+  } catch (e) {}
+}
+
+// ── 이름 입력창 ──────────────────────────────────────────
+const ui = document.getElementById('tbNameUi');
+const msg = document.getElementById('tbNameMsg');
+const input = document.getElementById('tbNameInput');
+const ok = document.getElementById('tbNameOk');
+let open = false, resolveName = null;
+
+function done() {
+  if (!open) return;
+  open = false;
+  ui.style.display = 'none';
+  input.blur();
+  const nm = input.value.trim().toUpperCase().slice(0, 8) || '---';
+  const r = resolveName; resolveName = null;
+  r && r(nm);
+}
+ok.addEventListener('click', done);
+input.addEventListener('keydown', (e) => {
+  e.stopPropagation();               // 게임 키 입력과 분리
+  if (e.key === 'Enter') done();
+});
+input.addEventListener('keyup', e => e.stopPropagation());
+
+function askName(text) {
+  msg.textContent = text || 'TOP 5!';
+  open = true;
+  ui.style.display = 'flex';
+  setTimeout(() => input.focus(), 30);
+  return new Promise(r => { resolveName = r; });
+}
+
+function fmtTime(ms) {
+  const t = Math.max(0, Math.round(ms));
+  const m = Math.floor(t / 60000), s = Math.floor(t / 1000) % 60, x = t % 1000;
+  return (m ? m + ':' + String(s).padStart(2, '0') : String(s)) + '.' + String(x).padStart(3, '0');
+}
+
+window.TurtleBoard = { configured, top, qualifies, submit, askName, isOpen: () => open, fmtTime };
+})();
+</script>

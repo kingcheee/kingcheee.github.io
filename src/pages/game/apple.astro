@@ -1,0 +1,675 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import GameBoard from "../../components/GameBoard.astro";
+---
+
+<BaseLayout title="사과 게임" sideBarActiveItemID="game">
+  <div id="appleWrap">
+    <canvas id="appleCv" width="720" height="470"></canvas>
+  </div>
+  <p id="appleHint">폰은 가로로 돌리면 사과가 더 커진다</p>
+  <GameBoard />
+</BaseLayout>
+
+<style is:global>
+  /* 게임 페이지 전용: 푸터를 내리고 화면에 꽉 차게 (game.astro와 같은 이유로 footer.footer) */
+  footer.footer { display: none; }
+  /* 폰에서는 좌우 여백을 줄여 보드를 한 뼘 키운다 */
+  @media (max-width: 640px) {
+    main { padding-left: 8px !important; padding-right: 8px !important; padding-top: 16px !important; }
+  }
+</style>
+
+<style>
+  #appleWrap {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+  }
+  #appleHint { display: none; margin: 10px 0 0; text-align: center; font-size: 13px; color: rgba(35, 40, 30, 0.55); }
+  @media (orientation: portrait) and (max-width: 640px) { #appleHint { display: block; } }
+  canvas {
+    display: block;
+    touch-action: none;           /* 드래그가 스크롤·확대로 새지 않게 */
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+</style>
+
+<script is:inline data-astro-rerun>
+// 사과 게임 — Fruit Box(Game Saien) 규칙·배치·타이밍을 그대로 옮긴 클론. 그림·소리는 전부 새로 그렸다.
+// 논리 캔버스 720x470(원작 크기)을 화면에 맞춰 늘리고, 좌표는 전부 논리 단위로 다룬다.
+// ViewTransitions: data-astro-rerun으로 재방문마다 다시 실행되고, astro:before-swap에서 정리한다.
+(() => {
+const cv = document.getElementById('appleCv');
+const wrap = document.getElementById('appleWrap');
+const ctx = cv.getContext('2d');
+const TB = window.TurtleBoard;
+
+const W = 720, H = 470;
+const COLS = 17, ROWS = 10, PITCH = 33, X0 = 85, Y0 = 88;
+const TIME_ALL = 120;                 // 초
+const TICK = 1000 / 30;               // 원작 30fps — 애니메이션은 이 박자로 진행
+const GAME = 'apple';
+const FONT = '"Pretendard Variable", Pretendard, sans-serif';
+const PIXEL = '"Mona12", "Mona12 Text KR", "Pretendard Variable", Pretendard, sans-serif';
+const C = {
+  bg: '#FEFDFA', panel: '#F7F6F0', line: '#EAEAE2', ink: '#23281E',
+  green: '#2F8A25', bright: '#55B93E', pale: '#EAF6E4',
+  red: '#C4442A', yellow: '#D9A520',
+};
+// 보통 / Light Colors
+const PAL = {
+  dark:  { apple: '#C4442A', stem: '#6B3A1E', leaf: '#2F8A25', btn: '#2F8A25', time: '#C4442A' },
+  light: { apple: '#E0705A', stem: '#9A5A3A', leaf: '#55B93E', btn: '#55B93E', time: '#E0705A' },
+};
+const RIM = '#F2D654';                // 선택된 사과 테두리 (원작 노란 테두리)
+
+// ── 수명 관리 ────────────────────────────────────────────
+const ac = new AbortController();
+let dead = false;
+document.addEventListener('astro:before-swap', () => {
+  dead = true;
+  ac.abort();
+  try { if (AC) AC.close(); } catch (e) {}
+}, { once: true });
+const on = (t, ev, fn, opts) => t.addEventListener(ev, fn, Object.assign({ signal: ac.signal }, opts));
+
+// ── 설정 (localStorage) ──────────────────────────────────
+const SKEY = 'turtle-apple-settings';
+const set = { light: false, sound: true, vol: 0.3 };
+try {
+  const s = JSON.parse(localStorage.getItem(SKEY));
+  if (s) {
+    if (typeof s.light === 'boolean') set.light = s.light;
+    if (typeof s.sound === 'boolean') set.sound = s.sound;
+    if (typeof s.vol === 'number' && s.vol >= 0 && s.vol <= 1) set.vol = s.vol;
+  }
+} catch (e) {}
+function saveSet() { try { localStorage.setItem(SKEY, JSON.stringify(set)); } catch (e) {} }
+const pal = () => set.light ? PAL.light : PAL.dark;
+
+// ── 사운드: 조용한 합성 효과음만 (BGM 없음) ──────────────
+let AC = null;
+function initAudio() {
+  try {
+    if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state === 'suspended') AC.resume();
+  } catch (e) { AC = null; }
+}
+function tone(f, at, dur, peak, type, fEnd) {
+  if (!AC || !set.sound || set.vol <= 0) return;
+  try {
+    const t0 = AC.currentTime + at;
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type = type || 'sine';
+    o.frequency.setValueAtTime(f, t0);
+    if (fEnd) o.frequency.exponentialRampToValueAtTime(fEnd, t0 + dur);
+    const v = peak * set.vol * 0.35;   // 전체적으로 작게
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, v), t0 + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g); g.connect(AC.destination);
+    o.start(t0); o.stop(t0 + dur + 0.02);
+  } catch (e) {}
+}
+const snd = {
+  click: () => tone(1100, 0, 0.06, 0.25, 'sine', 700),
+  clear: () => { tone(880, 0, 0.12, 0.22, 'triangle'); tone(1320, 0.06, 0.16, 0.22, 'triangle'); },
+  over:  () => { tone(784, 0, 0.22, 0.3, 'triangle'); tone(659, 0.16, 0.22, 0.3, 'triangle'); tone(523, 0.32, 0.45, 0.3, 'triangle'); },
+};
+
+// ── 화면 맞춤 ────────────────────────────────────────────
+let K = 1;                            // 논리 px → 캔버스 px
+function fit() {
+  const main = wrap.closest('main');
+  let pad = 48;
+  if (main) {
+    const cs = getComputedStyle(main);
+    pad = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+  }
+  const vw = document.documentElement.clientWidth;
+  const availW = Math.min(vw, 900) - pad;
+  const availH = Math.max(200, innerHeight - wrap.getBoundingClientRect().top - 12);
+  const s = Math.max(0.3, Math.min(availW / W, availH / H, 1.6));
+  const dpr = window.devicePixelRatio || 1;
+  cv.style.width = Math.floor(W * s) + 'px';
+  cv.style.height = Math.floor(H * s) + 'px';
+  cv.width = Math.round(W * s * dpr);
+  cv.height = Math.round(H * s * dpr);
+  K = cv.width / W;
+  buildSprites();
+}
+
+// ── 사과 그리기 ──────────────────────────────────────────
+function applePath(g, cx, cy, r) {
+  g.beginPath();
+  g.moveTo(cx, cy - r * 0.62);
+  g.bezierCurveTo(cx + r * 0.55, cy - r * 1.05, cx + r * 1.12, cy - r * 0.55, cx + r * 1.0, cy + r * 0.15);
+  g.bezierCurveTo(cx + r * 0.9, cy + r * 0.85, cx + r * 0.45, cy + r * 1.05, cx, cy + r * 0.9);
+  g.bezierCurveTo(cx - r * 0.45, cy + r * 1.05, cx - r * 0.9, cy + r * 0.85, cx - r * 1.0, cy + r * 0.15);
+  g.bezierCurveTo(cx - r * 1.12, cy - r * 0.55, cx - r * 0.55, cy - r * 1.05, cx, cy - r * 0.62);
+  g.closePath();
+}
+function drawApple(g, cx, cy, r, P, opt) {
+  opt = opt || {};
+  // 그림자
+  g.fillStyle = 'rgba(35,40,30,' + (opt.sel ? 0.22 : 0.13) + ')';
+  g.beginPath();
+  g.ellipse(cx + r * 0.08, cy + r * 0.92, r * (opt.sel ? 0.95 : 0.8), r * 0.2, 0, 0, Math.PI * 2);
+  g.fill();
+  // 꼭지
+  g.strokeStyle = P.stem;
+  g.lineCap = 'round';
+  g.lineWidth = r * 0.17;
+  g.beginPath();
+  g.moveTo(cx, cy - r * 0.55);
+  g.quadraticCurveTo(cx + r * 0.02, cy - r * 0.95, cx + r * 0.2, cy - r * 1.12);
+  g.stroke();
+  // 잎
+  g.fillStyle = P.leaf;
+  g.beginPath();
+  g.ellipse(cx + r * 0.42, cy - r * 0.95, r * 0.32, r * 0.14, -0.45, 0, Math.PI * 2);
+  g.fill();
+  // 몸통
+  applePath(g, cx, cy, r);
+  g.fillStyle = P.apple;
+  g.fill();
+  if (opt.sel) {
+    g.lineWidth = r * 0.2;
+    g.strokeStyle = RIM;
+    g.stroke();
+  }
+  // 광택
+  g.fillStyle = 'rgba(255,255,255,0.32)';
+  g.beginPath();
+  g.ellipse(cx - r * 0.5, cy - r * 0.18, r * 0.16, r * 0.3, 0.35, 0, Math.PI * 2);
+  g.fill();
+  if (opt.label != null) {
+    g.fillStyle = '#FFFFFF';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.font = 'bold ' + (opt.size || 16) + 'px ' + (opt.font || FONT);
+    g.fillText(String(opt.label), cx, cy + r * (opt.dy == null ? 0.2 : opt.dy));
+  }
+}
+
+// 숫자 1~9 × 선택 여부 스프라이트 (팔레트·배율이 바뀔 때 다시 굽는다)
+const SPR = 40, AR = 12.5;            // 스프라이트 한 변(논리 px), 몸통 반지름
+let sprites = null, bgCanvas = null, frameCanvas = null;
+function buildSprites() {
+  const P = pal();
+  sprites = { n: [], s: [] };
+  const px = Math.ceil(SPR * K);
+  for (let d = 1; d <= 9; d++) {
+    for (const sel of [false, true]) {
+      const c = document.createElement('canvas');
+      c.width = c.height = px;
+      const g = c.getContext('2d');
+      g.setTransform(px / SPR, 0, 0, px / SPR, 0, 0);
+      const r = sel ? AR * 1.09 : AR;
+      drawApple(g, SPR / 2, SPR / 2 + 1, r, P, { sel, label: d, size: sel ? 17.4 : 16, dy: 0.24 });
+      (sel ? sprites.s : sprites.n)[d] = c;
+    }
+  }
+  buildBg();
+}
+function buildBg() {
+  // 깅엄 바탕 + 둥근 초록 프레임 (원작: 683x435 바탕 @18,18 / 717x468 프레임 @3,3)
+  bgCanvas = document.createElement('canvas');
+  bgCanvas.width = cv.width; bgCanvas.height = cv.height;
+  const g = bgCanvas.getContext('2d');
+  g.setTransform(K, 0, 0, K, 0, 0);
+  g.fillStyle = C.bg;
+  g.fillRect(0, 0, W, H);
+  g.fillStyle = C.pale;
+  g.fillRect(18, 18, 683, 435);
+  // 깅엄: 8px 간격 연한 줄 + 굵은 띠 교차
+  g.fillStyle = 'rgba(85,185,62,0.10)';
+  for (let x = 18; x < 701; x += 16) g.fillRect(x, 18, 8, 435);
+  for (let y = 18; y < 453; y += 16) g.fillRect(18, y, 683, 8);
+  g.fillStyle = 'rgba(254,253,250,0.75)';
+  for (let x = 18; x < 701; x += 8) g.fillRect(x, 18, 1, 435);
+  for (let y = 18; y < 453; y += 8) g.fillRect(18, y, 683, 1);
+  // 프레임은 따로 굽는다 — 원작처럼 게임 층(떨어지는 사과·결과 사과) 위에 덮인다
+  frameCanvas = document.createElement('canvas');
+  frameCanvas.width = cv.width; frameCanvas.height = cv.height;
+  const f = frameCanvas.getContext('2d');
+  f.setTransform(K, 0, 0, K, 0, 0);
+  // 바깥 모서리 밖은 페이지 바탕색
+  f.beginPath();
+  f.rect(0, 0, W, H);
+  f.roundRect(3, 3, 714, 465, 24);
+  f.fillStyle = C.bg;
+  f.fill('evenodd');
+  // 프레임 (바깥 둥근 사각형 - 안쪽 구멍)
+  f.beginPath();
+  f.roundRect(3, 3, 714, 465, 24);
+  f.roundRect(33, 40, 650, 388, 8);
+  f.fillStyle = C.green;
+  f.fill('evenodd');
+  // 안쪽 가장자리 살짝 어둡게 — 프레임이 바탕 위로 올라온 느낌
+  f.strokeStyle = 'rgba(35,40,30,0.18)';
+  f.lineWidth = 1.5;
+  f.beginPath();
+  f.roundRect(33, 40, 650, 388, 8);
+  f.stroke();
+  // 위쪽 하이라이트
+  f.strokeStyle = 'rgba(255,255,255,0.18)';
+  f.lineWidth = 2;
+  f.beginPath();
+  f.roundRect(5, 5, 710, 461, 22);
+  f.stroke();
+}
+
+// ── 판 생성: 169칸은 1~9 균등, 마지막 칸이 합을 10의 배수로 맞춘다 (10이면 전체 재추첨) ──
+function makeBoard() {
+  while (true) {
+    const a = [];
+    let sum = 0;
+    for (let i = 0; i < COLS * ROWS - 1; i++) {
+      const v = Math.floor(Math.random() * 9) + 1;
+      a.push(v); sum += v;
+    }
+    const last = 10 - (sum % 10);
+    if (last === 10) continue;
+    a.push(last);
+    return a.map((v, i) => ({ v, c: i % COLS, r: Math.floor(i / COLS),
+                              x: X0 + PITCH * (i % COLS), y: Y0 + PITCH * Math.floor(i / COLS),
+                              gone: false, sel: false }));
+  }
+}
+
+// ── 상태 ─────────────────────────────────────────────────
+let state = 'start';                  // start | play | over
+let apples = [], falling = [], score = 0, t0 = 0, endAt = 0;
+let sel = null;                       // {x0,y0,x1,y1,sum}
+let pmSign = 1;                       // 떨어지는 방향 — 사과 하나마다 좌우 교대
+let over = null;                      // {y, target, k, alpha, perfect, elapsed}
+let topList = [], myEntry = null, round = 0;
+let volDrag = false, ptrId = null;
+
+function goStart() {
+  state = 'start';
+  apples = []; falling = []; sel = null; over = null;
+  round++;
+  refreshTop();
+}
+function startGame() {
+  state = 'play';
+  apples = makeBoard();
+  falling = []; sel = null; over = null; score = 0; myEntry = null;
+  t0 = performance.now();
+  round++;
+}
+function endGame(perfect) {
+  state = 'over';
+  endAt = performance.now();
+  sel = null;
+  for (const a of apples) a.sel = false;
+  const elapsed = Math.floor((endAt - t0) / 100) / 10;
+  over = { y: -125, target: perfect ? 50 : 70, k: 0, alpha: 0, perfect, elapsed };
+  snd.over();
+  boardFlow(score, round);
+}
+async function refreshTop() {
+  if (!TB) return;
+  const r = round;
+  const list = await TB.top(GAME);
+  if (!dead && r === round) topList = list;
+}
+async function boardFlow(sc, r) {
+  if (!TB) return;
+  const list = await TB.top(GAME);
+  if (dead || r !== round) return;
+  topList = list;
+  if (!(sc > 0 && TB.qualifies(list, sc, GAME))) return;
+  await new Promise(res => setTimeout(res, 900));   // 사과가 내려온 뒤에 이름창
+  if (dead || r !== round) return;
+  const name = await TB.askName('TOP 5! ' + sc);
+  await TB.submit(GAME, name, sc);
+  myEntry = { name, value: sc };
+  const list2 = await TB.top(GAME);
+  if (!dead) topList = list2;
+}
+
+// ── 선택 ─────────────────────────────────────────────────
+function updateSel() {
+  const minX = Math.min(sel.x0, sel.x1), maxX = Math.max(sel.x0, sel.x1);
+  const minY = Math.min(sel.y0, sel.y1), maxY = Math.max(sel.y0, sel.y1);
+  let sum = 0;
+  for (const a of apples) {
+    if (a.gone) { a.sel = false; continue; }
+    a.sel = a.x > minX && a.x < maxX && a.y > minY && a.y < maxY;   // 중심이 사각형 안(엄격)
+    if (a.sel) sum += a.v;
+  }
+  sel.sum = sum;
+}
+function releaseSel(commit) {
+  if (!sel) return;
+  if (commit) updateSel();
+  if (commit && sel.sum === 10) {
+    let n = 0;
+    for (const a of apples) {
+      if (!a.sel) continue;
+      a.gone = true; a.sel = false; n++;
+      pmSign = -pmSign;
+      falling.push({ v: a.v, x: a.x, y: a.y, rot: 0, px: a.x, py: a.y, prot: 0,
+                     rax: 20 * Math.random(), ray: -25 * Math.random(), k: 0, pm: pmSign });
+    }
+    score += n;                       // 사과 하나에 1점
+    snd.clear();
+    if (apples.every(a => a.gone)) endGame(true);
+  }
+  for (const a of apples) a.sel = false;
+  sel = null;
+}
+
+// ── 아래 옵션 줄 (원작 좌표) ─────────────────────────────
+const UI = {
+  reset: { x: 61, y: 436, w: 50, h: 20 },
+  light: { x: 438, y: 432, w: 86, h: 26, box: 442 },
+  sound: { x: 528, y: 432, w: 66, h: 26, box: 532 },
+  vol:   { x0: 602, x1: 672, y: 446 },
+};
+const PLAY_BTN = { x: 208, y: 258, r: 60 };
+const AGAIN_BTN = { x: 324 - 81, y: 311 - 18.5, w: 162, h: 37 };
+const inR = (p, r) => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
+function inVol(p) { return p.x >= UI.vol.x0 - 8 && p.x <= UI.vol.x1 + 8 && p.y >= 434 && p.y <= 460; }
+function setVol(p) {
+  set.vol = Math.round(Math.max(0, Math.min(1, (p.x - UI.vol.x0) / (UI.vol.x1 - UI.vol.x0))) * 100) / 100;
+}
+
+function toLogical(e) {
+  const b = cv.getBoundingClientRect();
+  return { x: (e.clientX - b.left) * W / b.width, y: (e.clientY - b.top) * H / b.height };
+}
+
+function hover(p) {
+  let pt = false;
+  if (inR(p, UI.reset) || inR(p, UI.light) || inR(p, UI.sound) || inVol(p)) pt = true;
+  else if (state === 'start' && Math.hypot(p.x - PLAY_BTN.x, p.y - PLAY_BTN.y) < PLAY_BTN.r) pt = true;
+  else if (state === 'over' && over && over.k > 30 && inR(p, AGAIN_BTN)) pt = true;
+  cv.style.cursor = pt ? 'pointer' : 'default';
+}
+
+on(cv, 'pointerdown', (e) => {
+  if (TB && TB.isOpen()) return;
+  if (e.button != null && e.button > 0) return;
+  e.preventDefault();
+  initAudio();
+  const p = toLogical(e);
+  // 옵션 줄은 언제나 동작
+  if (inR(p, UI.reset)) { releaseSel(false); snd.click(); goStart(); return; }
+  if (inR(p, UI.light)) { set.light = !set.light; saveSet(); buildSprites(); snd.click(); return; }
+  if (inR(p, UI.sound)) { set.sound = !set.sound; saveSet(); snd.click(); return; }
+  if (inVol(p)) {
+    volDrag = true; ptrId = e.pointerId; setVol(p);
+    try { cv.setPointerCapture(e.pointerId); } catch (er) {}
+    return;
+  }
+  if (state === 'start') {
+    if (Math.hypot(p.x - PLAY_BTN.x, p.y - PLAY_BTN.y) < PLAY_BTN.r) { snd.click(); startGame(); }
+    return;
+  }
+  if (state === 'over') {
+    if (over && over.k > 30 && inR(p, AGAIN_BTN)) { snd.click(); goStart(); }
+    return;
+  }
+  if (state === 'play' && p.y < 432 && !sel) {
+    ptrId = e.pointerId;
+    sel = { x0: p.x, y0: p.y, x1: p.x, y1: p.y, sum: 0 };
+    updateSel();
+    try { cv.setPointerCapture(e.pointerId); } catch (er) {}
+  }
+});
+on(cv, 'pointermove', (e) => {
+  const p = toLogical(e);
+  if (volDrag && e.pointerId === ptrId) { setVol(p); return; }
+  if (sel && e.pointerId === ptrId) {
+    if (TB && TB.isOpen()) return;
+    sel.x1 = p.x; sel.y1 = p.y;
+    updateSel();                      // 원작은 이벤트 두 번에 한 번 — 여기선 매번
+    return;
+  }
+  if (e.pointerType === 'mouse') hover(p);
+});
+function up(e, commit) {
+  if (e.pointerId !== ptrId) return;
+  if (volDrag) { volDrag = false; saveSet(); snd.click(); }
+  else if (sel) {
+    const p = toLogical(e);
+    sel.x1 = p.x; sel.y1 = p.y;
+    releaseSel(commit && state === 'play');
+  }
+  ptrId = null;
+}
+on(cv, 'pointerup', (e) => up(e, true));
+on(cv, 'pointercancel', (e) => up(e, false));
+on(cv, 'contextmenu', (e) => e.preventDefault());
+on(window, 'resize', fit);
+
+// ── 30fps 틱: 떨어지는 사과·결과 화면 연출 ───────────────
+function tick() {
+  for (let i = falling.length - 1; i >= 0; i--) {
+    const f = falling[i];
+    f.px = f.x; f.py = f.y; f.prot = f.rot;
+    f.y += f.ray + 0.07 * f.k * f.k;
+    f.k += 2;
+    f.x += 1.2 * f.rax * f.pm;
+    f.rot += 3 * f.pm;
+    if (f.k > 45) falling.splice(i, 1);
+  }
+  if (over) {
+    over.y += (over.target - over.y) / 5;
+    over.k++;
+    if (over.k > 8) over.alpha = Math.min(1, over.alpha + 0.1);
+  }
+}
+
+// ── 그리기 ────────────────────────────────────────────────
+function text(str, x, y, font, color, align, base) {
+  ctx.font = font;
+  ctx.fillStyle = color;
+  ctx.textAlign = align || 'left';
+  ctx.textBaseline = base || 'alphabetic';
+  ctx.fillText(str, x, y);
+}
+
+function drawOptions() {
+  const fg = C.pale;
+  // Reset
+  ctx.strokeStyle = fg;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(UI.reset.x + 0.5, UI.reset.y + 0.5, UI.reset.w - 1, UI.reset.h - 1);
+  text('Reset', UI.reset.x + UI.reset.w / 2, UI.reset.y + UI.reset.h / 2 + 0.5, 'bold 12px ' + FONT, fg, 'center', 'middle');
+  // 체크박스
+  const box = (bx, checked, label) => {
+    ctx.fillStyle = C.bg;
+    ctx.fillRect(bx, 439, 12, 12);
+    if (checked) {
+      ctx.strokeStyle = C.green;
+      ctx.lineWidth = 2.2;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(bx + 2.5, 445);
+      ctx.lineTo(bx + 5, 448.5);
+      ctx.lineTo(bx + 9.8, 441.8);
+      ctx.stroke();
+    }
+    text(label, bx + 16, 445.5, '600 11px ' + FONT, fg, 'left', 'middle');
+  };
+  box(UI.light.box, set.light, 'Light Colors');
+  box(UI.sound.box, set.sound, 'Sound');
+  // 볼륨 슬라이더
+  const { x0, x1, y } = UI.vol;
+  ctx.lineCap = 'round';
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = 'rgba(35,40,30,0.35)';
+  ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
+  const kx = x0 + (x1 - x0) * set.vol;
+  ctx.strokeStyle = C.bright;
+  if (set.vol > 0) { ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(kx, y); ctx.stroke(); }
+  ctx.fillStyle = C.pale;
+  ctx.beginPath(); ctx.arc(kx, y, 6, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = 'rgba(35,40,30,0.3)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+}
+
+function drawTop(x, y, w, title) {
+  text(title, x + w / 2, y, '15px ' + PIXEL, C.green, 'center');
+  if (!topList.length) {
+    text('아직 기록 없음', x + w / 2, y + 24, '12px ' + FONT, 'rgba(35,40,30,0.5)', 'center');
+    return;
+  }
+  let mineMarked = false;
+  topList.forEach((e, i) => {
+    const yy = y + 24 + i * 20;
+    const mine = !mineMarked && myEntry && e.name === myEntry.name && e.value === myEntry.value;
+    if (mine) mineMarked = true;
+    const col = mine ? C.green : C.ink;
+    text((i + 1) + '', x + 6, yy, 'bold 13px ' + FONT, mine ? C.green : 'rgba(35,40,30,0.45)', 'left');
+    text(e.name, x + 24, yy, 'bold 13px ' + FONT, col, 'left');
+    text(String(e.value), x + w - 6, yy, 'bold 13px ' + FONT, col, 'right');
+  });
+}
+
+function drawStart(now) {
+  const P = pal();
+  // 제목 (원작: 왼쪽 위 로고)
+  text('FRUIT BOX', 62, 84, '15px ' + PIXEL, C.green, 'left');
+  text('사과 게임', 60, 130, '44px ' + PIXEL, P.apple, 'left');
+  // Play 사과
+  const bob = Math.sin(now / 420) * 2;
+  drawApple(ctx, PLAY_BTN.x, PLAY_BTN.y + bob, 56, P, { label: 'Play', size: 30, dy: 0.16 });
+  text('합이 10이 되게 드래그 · 사과 하나에 1점 · 2분', PLAY_BTN.x, 370, '12px ' + FONT, 'rgba(35,40,30,0.6)', 'center');
+  // 오른쪽 장식 사과 무리
+  const deco = [[9, 1, 0, 0], [5, 5, 1, 0], [3, 7, 2, 0], [2, 8, 0.5, 1], [6, 4, 1.5, 1]];
+  for (const [a, b, c, r] of deco) {
+    const cx = 450 + c * 66, cy = 92 + r * 40;
+    ctx.drawImage(sprites.n[a], cx - SPR / 2, cy - SPR / 2, SPR, SPR);
+    ctx.drawImage(sprites.n[b], cx + 33 - SPR / 2, cy - SPR / 2, SPR, SPR);
+  }
+  // TOP 5
+  ctx.fillStyle = C.panel;
+  ctx.fillRect(440, 176, 196, 140);
+  drawTop(440, 200, 196, 'TOP 5');
+}
+
+function drawPlay() {
+  // 판
+  for (const a of apples) {
+    if (a.gone) continue;
+    const s = a.sel ? sprites.s[a.v] : sprites.n[a.v];
+    ctx.drawImage(s, a.x - SPR / 2, a.y - SPR / 2, SPR, SPR);
+  }
+}
+
+function drawFalling(alpha) {
+  for (const f of falling) {
+    const x = f.px + (f.x - f.px) * alpha, y = f.py + (f.y - f.py) * alpha;
+    const rot = f.prot + (f.rot - f.prot) * alpha;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rot * Math.PI / 180);
+    ctx.drawImage(sprites.n[f.v], -SPR / 2, -SPR / 2, SPR, SPR);
+    ctx.restore();
+    ctx.setTransform(K, 0, 0, K, 0, 0);
+  }
+}
+
+function drawHud(now) {
+  // 점수 (오른쪽 위, 라벨 없음)
+  text(String(score), 664, 68, 'bold 16px ' + FONT, C.green, 'right');
+  // 타이머 막대: 위에서부터 줄어든다
+  const rem = Math.max(0, TIME_ALL - (now - t0) / 1000);
+  const f = rem / TIME_ALL;
+  ctx.fillStyle = C.bright;
+  ctx.fillRect(651, 95 + 300 * (1 - f), 7, 300 * f);
+  ctx.strokeStyle = C.green;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(650.5, 94.5, 8, 301);
+}
+
+function drawSel() {
+  const x = Math.min(sel.x0, sel.x1), y = Math.min(sel.y0, sel.y1);
+  const w = Math.abs(sel.x1 - sel.x0), h = Math.abs(sel.y1 - sel.y0);
+  // 합이 10이면 진한 빨강 — 유일한 "맞다" 신호
+  ctx.fillStyle = sel.sum === 10 ? 'rgba(196,68,42,0.5)' : 'rgba(217,165,32,0.3)';
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = C.green;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x, y, w, h);
+}
+
+function drawOver() {
+  const P = pal();
+  const cx = 342, y = over.y;
+  // 큰 사과가 위에서 내려온다
+  drawApple(ctx, cx, y + 80, 78, P, {});
+  text('SCORE', cx, y + 34, '13px ' + PIXEL, 'rgba(255,255,255,0.9)', 'center', 'middle');
+  text(String(score), cx, y + 72, 'bold 56px ' + FONT, '#FFFFFF', 'center', 'middle');
+  if (over.perfect) {
+    text('Time: ' + over.elapsed.toFixed(1), 343, 212, 'bold 30px ' + FONT, P.time, 'center', 'middle');
+  }
+  // Play Again (1초 동안은 눌러도 무시)
+  ctx.globalAlpha = over.alpha;
+  const b = AGAIN_BTN;
+  ctx.fillStyle = 'rgba(35,40,30,0.25)';
+  ctx.beginPath(); ctx.roundRect(b.x + 2, b.y + 3, b.w, b.h, 8); ctx.fill();
+  ctx.fillStyle = P.btn;
+  ctx.beginPath(); ctx.roundRect(b.x, b.y, b.w, b.h, 8); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.18)';
+  ctx.beginPath(); ctx.roundRect(b.x + 3, b.y + 2, b.w - 6, b.h / 2 - 2, 6); ctx.fill();
+  text('Play Again', b.x + b.w / 2, b.y + b.h / 2 + 1, 'bold 17px ' + FONT, '#FFFFFF', 'center', 'middle');
+  // TOP 5
+  ctx.fillStyle = C.panel;
+  ctx.fillRect(470, 96, 176, 140);
+  drawTop(470, 120, 176, 'TOP 5');
+  ctx.globalAlpha = 1;
+}
+
+function draw(now, alpha) {
+  ctx.setTransform(K, 0, 0, K, 0, 0);
+  ctx.drawImage(bgCanvas, 0, 0, W, H);
+  if (state === 'start') drawStart(now);
+  else {
+    drawPlay();
+    if (state === 'play') drawHud(now);
+    drawFalling(alpha);
+    if (sel) drawSel();
+    if (state === 'over') drawOver();
+  }
+  ctx.drawImage(frameCanvas, 0, 0, W, H);
+  drawOptions();
+}
+
+// ── 루프 ─────────────────────────────────────────────────
+let last = performance.now(), acc = 0;
+function frame(now) {
+  if (dead) return;
+  acc += Math.min(250, now - last);
+  last = now;
+  while (acc >= TICK) { tick(); acc -= TICK; }
+  // 시간은 프레임 수가 아니라 실제 시각으로
+  if (state === 'play' && now - t0 >= TIME_ALL * 1000) { releaseSel(false); endGame(false); }
+  draw(now, acc / TICK);
+  requestAnimationFrame(frame);
+}
+
+fit();
+// 캔버스 글자는 폰트 로드를 일으키지 않으므로 직접 불러 둔다
+if (document.fonts && document.fonts.load) {
+  Promise.all([
+    document.fonts.load('bold 16px ' + FONT, '0123456789Play'),
+    document.fonts.load('44px ' + PIXEL, '사과 게임 FRUIT BOX TOP 5'),
+  ]).catch(() => {}).then(() => { if (!dead) buildSprites(); });
+}
+refreshTop();
+requestAnimationFrame(frame);
+})();
+</script>

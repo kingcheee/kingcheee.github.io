@@ -1,0 +1,1280 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import GameBoard from "../../components/GameBoard.astro";
+---
+
+<BaseLayout title="스도쿠" sideBarActiveItemID="game">
+  <div id="sdk">
+    <!-- 보드 위 난이도 띠 (데스크톱) -->
+    <div class="sdk-strip">
+      <div class="sdk-strip-title">난이도:</div>
+      <div class="sdk-strip-items">
+        <button type="button" class="sdk-diffbtn" data-diff="easy">쉬움</button>
+        <button type="button" class="sdk-diffbtn" data-diff="hard">어려움</button>
+      </div>
+    </div>
+
+    <div class="sdk-flex">
+      <!-- 통계 줄: 데스크톱은 오른쪽 패널 맨 위, 모바일은 보드 위 -->
+      <div class="sdk-stats">
+        <div class="sdk-stat sdk-score">
+          <svg class="sdk-cup" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h10v5.2a5 5 0 0 1-10 0z" /><path d="M7 5.5H4.2a3.3 3.3 0 0 0 3.3 4.3M17 5.5h2.8a3.3 3.3 0 0 1-3.3 4.3" fill="none" /><path d="M10.6 13.4h2.8v3.4h-2.8z" /><path d="M7.5 17.5h9v3h-9z" /></svg>
+          <span id="sdkScore">0</span>
+          <span id="sdkScoreAdd"></span>
+        </div>
+        <div class="sdk-stat sdk-stat-diff">
+          <div class="sdk-label">난이도</div>
+          <button type="button" id="sdkDiffLabel" class="sdk-difflabel"><span id="sdkDiffText">쉬움</span><svg viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" /></svg></button>
+          <div id="sdkDiffMenu" class="sdk-dropdown" hidden>
+            <button type="button" data-diff="easy">쉬움</button>
+            <button type="button" data-diff="hard">어려움</button>
+          </div>
+        </div>
+        <div class="sdk-stat">
+          <div class="sdk-label">실수</div>
+          <div class="sdk-val"><span id="sdkMis">0</span>/<span>3</span></div>
+        </div>
+        <div class="sdk-stat sdk-stat-time">
+          <div>
+            <div class="sdk-label">시간</div>
+            <div class="sdk-val" id="sdkTime">00:00</div>
+          </div>
+          <button type="button" id="sdkPause" class="sdk-pausebtn" aria-label="일시정지">
+            <svg class="ic-pause" viewBox="0 0 24 24"><rect x="7" y="6" width="3.4" height="12" rx="1.2" /><rect x="13.6" y="6" width="3.4" height="12" rx="1.2" /></svg>
+            <svg class="ic-play" viewBox="0 0 24 24"><path d="M8.5 6.6v10.8a1 1 0 0 0 1.5.86l8.6-5.4a1 1 0 0 0 0-1.72L10 5.74a1 1 0 0 0-1.5.86z" /></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- 보드 -->
+      <div class="sdk-gamewrap">
+        <div id="sdkBoard" class="sdk-board"></div>
+        <div id="sdkPauseOv" class="sdk-pauseov">
+          <button type="button" class="sdk-bigplay" aria-label="계속하기">
+            <svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="30" /><path d="M39.1 32l-12.6 8.6a2.4 2.4 0 0 1-3.7-2V21.4a2.4 2.4 0 0 1 3.7-2l12.6 8.6a2.4 2.4 0 0 1 0 4z" /></svg>
+          </button>
+        </div>
+        <div id="sdkTip" class="sdk-tip">셀을 선택한 후, 셀 안에 채울 숫자를 탭하세요</div>
+
+        <!-- 게임 오버 -->
+        <div id="sdkOver" class="sdk-layer" hidden>
+          <div class="sdk-card">
+            <div class="sdk-card-title">게임 오버</div>
+            <div class="sdk-card-desc">3회 실수하면 게임이 종료됩니다</div>
+            <button type="button" id="sdkSecond" class="sdk-mainbtn">두 번째 기회</button>
+            <button type="button" id="sdkOverNew" class="sdk-linkbtn">새 게임</button>
+          </div>
+        </div>
+
+        <!-- 승리 -->
+        <div id="sdkWin" class="sdk-layer sdk-layer-win" hidden>
+          <div class="sdk-card sdk-wincard">
+            <div class="sdk-card-title">훌륭합니다!</div>
+            <dl class="sdk-winstats">
+              <div><dt>난이도</dt><dd id="sdkWinDiff">쉬움</dd></div>
+              <div><dt>시간</dt><dd id="sdkWinTime">00:00</dd></div>
+              <div><dt>점수</dt><dd id="sdkWinScore">0</dd></div>
+              <div><dt>최고 점수</dt><dd id="sdkWinBest">0</dd></div>
+            </dl>
+            <p id="sdkWinNote" class="sdk-winnote"></p>
+            <div id="sdkWinTopWrap" class="sdk-wintop" hidden>
+              <div class="sdk-toptitle">어려움 TOP 5</div>
+              <ol id="sdkWinTop" class="sdk-toplist"></ol>
+            </div>
+            <button type="button" id="sdkWinNew" class="sdk-mainbtn">새 게임</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 컨트롤 패널 -->
+      <div class="sdk-newgame">
+        <button type="button" id="sdkNewBtn" class="sdk-mainbtn">새 게임</button>
+      </div>
+
+      <div class="sdk-controls">
+        <div class="sdk-tools">
+          <button type="button" class="sdk-tool" data-act="undo">
+            <span class="sdk-toolic"><svg viewBox="0 0 24 24"><path d="M9.2 4.6L5.4 8.7l3.8 4.1" /><path d="M5.8 8.7h7.4a6.2 6.2 0 1 1-6.2 6.2" /></svg></span>
+            <span class="sdk-toollabel">실행 취소</span>
+          </button>
+          <button type="button" class="sdk-tool" data-act="erase">
+            <span class="sdk-toolic"><svg viewBox="0 0 24 24"><path d="M13.9 4.9l5.2 5.2a1.6 1.6 0 0 1 0 2.3L11.3 20H7.6l-3.2-3.2a1.6 1.6 0 0 1 0-2.3l7.2-7.2z" /><path d="M8.3 9.5l6.2 6.2" /><path d="M14.5 20h5.5" /></svg></span>
+            <span class="sdk-toollabel">지우기</span>
+          </button>
+          <button type="button" class="sdk-tool" data-act="notes">
+            <span class="sdk-toolic"><svg viewBox="0 0 24 24"><path d="M15.6 4.6a2.3 2.3 0 0 1 3.3 3.3L8.6 18.2l-4.1 1 1-4.1z" /><path d="M13.8 6.4l3.3 3.3" /></svg><i id="sdkNoteBadge" class="sdk-badge sdk-badge-pill">OFF</i></span>
+            <span class="sdk-toollabel">메모</span>
+          </button>
+          <button type="button" class="sdk-tool" data-act="hint">
+            <span class="sdk-toolic"><svg viewBox="0 0 24 24"><path d="M9.4 17.2h5.2M10.2 20.2h3.6" /><path d="M12 3.4a6.1 6.1 0 0 0-3.4 11.2c.5.4.8.9.8 1.6v1h5.2v-1c0-.7.3-1.2.8-1.6A6.1 6.1 0 0 0 12 3.4z" /></svg><i id="sdkHintBadge" class="sdk-badge sdk-badge-dot">3</i></span>
+            <span class="sdk-toollabel">힌트</span>
+          </button>
+        </div>
+        <div class="sdk-numpad" id="sdkPad">
+          <button type="button" data-n="1">1</button><button type="button" data-n="2">2</button><button type="button" data-n="3">3</button>
+          <button type="button" data-n="4">4</button><button type="button" data-n="5">5</button><button type="button" data-n="6">6</button>
+          <button type="button" data-n="7">7</button><button type="button" data-n="8">8</button><button type="button" data-n="9">9</button>
+        </div>
+
+        <!-- 스마트 힌트 캐러셀 (컨트롤 위를 덮는다) -->
+        <div id="sdkHintBox" class="sdk-hintbox" hidden>
+          <button type="button" id="sdkHintClose" class="sdk-hintclose" aria-label="닫기"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" /></svg></button>
+          <div id="sdkHintName" class="sdk-hintname"></div>
+          <div id="sdkHintDesc" class="sdk-hintdesc"></div>
+          <div class="sdk-hintnav">
+            <button type="button" id="sdkHintPrev" class="sdk-hintarrow" aria-label="이전"><svg viewBox="0 0 24 24"><path d="M14.5 6l-6 6 6 6" /></svg></button>
+            <div id="sdkHintDots" class="sdk-hintdots"></div>
+            <button type="button" id="sdkHintNext" class="sdk-hintarrow" aria-label="다음"><svg viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6" /></svg></button>
+            <button type="button" id="sdkHintOk" class="sdk-hintok" aria-label="확인"><svg viewBox="0 0 24 24"><path d="M5.5 12.5l4.2 4.2 8.8-9" /></svg></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 새 게임 메뉴 -->
+    <div id="sdkMenu" class="sdk-modal" hidden>
+      <div class="sdk-menu">
+        <div class="sdk-menu-head">새 게임</div>
+        <div class="sdk-menu-sub">현재 게임 진행 상황이 사라집니다</div>
+        <button type="button" class="sdk-menu-item" data-diff="easy"><span class="sdk-menu-ic"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" /><path d="M9.3 4v16M14.7 4v16M4 9.3h16M4 14.7h16" /></svg></span>쉬움</button>
+        <button type="button" class="sdk-menu-item" data-diff="hard"><span class="sdk-menu-ic"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" /><path d="M9.3 4v16M14.7 4v16M4 9.3h16M4 14.7h16" /></svg></span>어려움</button>
+        <button type="button" class="sdk-menu-item" data-act="restart"><span class="sdk-menu-ic"><svg viewBox="0 0 24 24"><path d="M19 12a7 7 0 1 1-2.1-5" /><path d="M17.5 3.5v4h-4" /></svg></span>다시 시작</button>
+        <button type="button" id="sdkMenuCancel" class="sdk-menu-cancel">취소</button>
+      </div>
+    </div>
+
+    <!-- 난이도 변경 확인 -->
+    <div id="sdkConfirm" class="sdk-modal" hidden>
+      <div class="sdk-menu">
+        <div class="sdk-menu-head">새 게임 시작</div>
+        <div class="sdk-menu-sub">현재 게임 진행 상황이 사라집니다</div>
+        <label class="sdk-check"><input type="checkbox" id="sdkNoAsk" /> 다시 묻지 않기</label>
+        <div class="sdk-confirm-btns">
+          <button type="button" id="sdkConfirmNo" class="sdk-subbtn">취소</button>
+          <button type="button" id="sdkConfirmOk" class="sdk-mainbtn">확인</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 어려움 TOP 5 -->
+    <section class="sdk-board5">
+      <div class="sdk-toptitle">어려움 TOP 5 <span>완료 시간</span></div>
+      <ol id="sdkTop" class="sdk-toplist"></ol>
+    </section>
+  </div>
+  <GameBoard />
+</BaseLayout>
+
+<style is:global>
+  footer.footer { display: none; }
+
+  #sdk {
+    --bg: #FEFDFA; --panel: #F7F6F0; --line: #EAEAE2; --ink: #23281E;
+    --green: #2F8A25; --bright: #55B93E; --pale: #EAF6E4;
+    --red: #C4442A; --yellow: #D9A520;
+    --thin: #D5D6C9;          /* 얇은 칸 선 (원본 #BFC6D4 역할) */
+    --muted: #7A7F70;         /* 라벨 (원본 #6e7c8c 역할) */
+    --ctl: #EEEEE6;           /* 도구·숫자 버튼 바탕 (원본 #eaeef4 역할) */
+    --ctl-h: #E2E3D8;
+    --hl-area: #EEF4E6;       /* 같은 행·열·블록 (원본 #e2ebf3) */
+    --hl-same: #D3E9C8;       /* 같은 숫자 (원본 #c3d7ea) */
+    --hl-sel: #BFE0AE;        /* 선택 셀 (원본 #bbdefb) */
+    --hl-conf: #F6D9D0;       /* 충돌 (원본 #f7cfd6) */
+    font-family: "Pretendard Variable", Pretendard, -apple-system, system-ui, sans-serif;
+    color: var(--ink);
+    width: min(852px, calc(100vw - 48px));
+    max-width: 100%;
+    margin: 0 auto;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  #sdk button { font-family: inherit; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+  #sdk [hidden] { display: none !important; }
+
+  /* ── 난이도 띠 ───────────────────────── */
+  #sdk .sdk-strip { display: flex; align-items: center; gap: 4px; min-height: 34px; margin: -6px 0 12px; font-size: 14px; }
+  #sdk .sdk-strip-title { color: var(--muted); font-weight: 500; margin-right: 6px; }
+  #sdk .sdk-strip-items { display: flex; gap: 2px; }
+  #sdk .sdk-diffbtn { background: none; border: 0; padding: 6px 10px; border-radius: 6px; color: var(--muted); font-size: 14px; font-weight: 500; cursor: pointer; }
+  #sdk .sdk-diffbtn:hover { color: var(--ink); background: var(--panel); }
+  #sdk .sdk-diffbtn.active { color: var(--green); font-weight: 700; }
+
+  /* ── 큰 틀: 모바일은 세로 쌓기 ─────────── */
+  #sdk .sdk-flex { display: grid; grid-template-columns: 100%; grid-template-areas: "stats" "board" "controls" "newgame"; row-gap: 0; }
+  #sdk .sdk-stats { grid-area: stats; }
+  #sdk .sdk-gamewrap { grid-area: board; }
+  #sdk .sdk-controls { grid-area: controls; }
+  #sdk .sdk-newgame { grid-area: newgame; }
+
+  @media (min-width: 801px) {
+    #sdk .sdk-flex {
+      grid-template-columns: minmax(250px, 500px) minmax(0, 1fr);
+      grid-template-rows: auto auto auto 1fr;
+      grid-template-areas: "board stats" "board newgame" "board controls" "board .";
+      column-gap: 28px;
+    }
+  }
+  @media (max-width: 800px) {
+    #sdk .sdk-strip { display: none; }
+  }
+
+  /* ── 통계 줄 ─────────────────────────── */
+  #sdk .sdk-stats { display: flex; justify-content: space-between; align-items: center; min-height: 40px; margin-bottom: 12px; position: relative; }
+  #sdk .sdk-stat { position: relative; display: flex; flex-direction: column; }
+  #sdk .sdk-label { color: var(--muted); font-size: 13px; font-weight: 500; letter-spacing: .22px; line-height: 1.23; margin-bottom: 1px; white-space: nowrap; }
+  #sdk .sdk-val { font-size: 15px; font-weight: 600; line-height: 1.33; font-variant-numeric: tabular-nums; }
+  #sdk .sdk-score { flex-direction: row; align-items: center; gap: 6px; font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  #sdk .sdk-cup { width: 22px; height: 22px; fill: var(--yellow); stroke: var(--yellow); stroke-width: 1.6; stroke-linejoin: round; }
+  #sdk .sdk-cup path[fill="none"] { fill: none; }
+  #sdkScoreAdd { position: absolute; left: 28px; top: -16px; font-size: 14px; font-weight: 700; color: var(--green); opacity: 0; white-space: nowrap; pointer-events: none; }
+  #sdkScoreAdd.show { animation: sdkScoreUp 1s ease-out forwards; }
+  @keyframes sdkScoreUp { 0% { opacity: 0; transform: translateY(6px); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(-14px); } }
+
+  #sdk .sdk-difflabel { display: flex; align-items: center; gap: 4px; background: none; border: 0; padding: 0; font-size: 15px; font-weight: 600; color: var(--ink); cursor: pointer; line-height: 1.33; }
+  #sdk .sdk-difflabel svg { width: 10px; height: 6px; fill: none; stroke: var(--muted); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  #sdk .sdk-dropdown { position: absolute; top: calc(100% + 6px); left: -12px; z-index: 30; background: #fff; border-radius: 8px; box-shadow: 0 4px 18px rgba(35, 40, 30, .16); padding: 6px 0; min-width: 120px; }
+  #sdk .sdk-dropdown button { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 8px 16px; font-size: 15px; color: var(--ink); cursor: pointer; }
+  #sdk .sdk-dropdown button:hover { background: var(--pale); }
+  #sdk .sdk-dropdown button.active { color: var(--green); font-weight: 700; }
+  #sdk .sdk-stat-time { flex-direction: row; align-items: center; gap: 8px; }
+  #sdk .sdk-pausebtn { width: 34px; height: 34px; border-radius: 50%; border: 0; background: var(--ctl); display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+  #sdk .sdk-pausebtn:hover { background: var(--ctl-h); }
+  #sdk .sdk-pausebtn svg { width: 20px; height: 20px; fill: var(--green); }
+  #sdk .sdk-pausebtn .ic-play { display: none; }
+  #sdk.paused .sdk-pausebtn .ic-play { display: block; }
+  #sdk.paused .sdk-pausebtn .ic-pause { display: none; }
+
+  /* ── 보드 ─────────────────────────────── */
+  #sdk .sdk-gamewrap { position: relative; width: 100%; max-width: 500px; justify-self: center; align-self: start; }
+  #sdk .sdk-board {
+    container-type: inline-size;
+    display: grid; grid-template-columns: repeat(9, 1fr); grid-template-rows: repeat(9, 1fr);
+    aspect-ratio: 1 / 1; width: 100%;
+    border: 2px solid var(--ink); background: var(--bg);
+    touch-action: manipulation;
+  }
+  #sdk .c {
+    position: relative; box-sizing: border-box;
+    border-right: 1px solid var(--thin); border-bottom: 1px solid var(--thin);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; background: var(--bg);
+    transition: background-color .08s;
+  }
+  #sdk .c.br { border-right: 2px solid var(--ink); }
+  #sdk .c.bb { border-bottom: 2px solid var(--ink); }
+  #sdk .c.er { border-right: 0; }
+  #sdk .c.eb { border-bottom: 0; }
+  #sdk .c .v { font-size: 6.6cqw; font-weight: 400; line-height: 1; color: var(--ink); font-variant-numeric: tabular-nums; }
+  #sdk .c.user .v { color: var(--green); }
+  #sdk .c.bad .v { color: var(--red); }
+  #sdk .c .nt { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 1px 2px; }
+  #sdk .c .nt span { display: flex; align-items: center; justify-content: center; font-size: 2.65cqw; line-height: 1; color: var(--muted); font-weight: 500; }
+  #sdk .c .nt span.hot { color: var(--green); font-weight: 800; }
+  #sdk .c.area { background: var(--hl-area); }
+  #sdk .c.same { background: var(--hl-same); }
+  #sdk .c.conf { background: var(--hl-conf); }
+  #sdk .c.sel { background: var(--hl-sel); }
+  #sdk .c.sh-area { background: var(--hl-same); }
+  #sdk .c.sh-target { background: var(--hl-sel); box-shadow: inset 0 0 0 2px var(--green); }
+  #sdk .c.wave { animation: sdkWave .5s ease-out; }
+  @keyframes sdkWave { 0% { background-color: var(--bg); } 35% { background-color: var(--hl-sel); } 100% { background-color: var(--bg); } }
+  #sdk .c.clear { animation: sdkClear .55s ease-out forwards; }
+  #sdk .c.clear .v, #sdk .c.clear .nt { animation: sdkFade .55s ease-out forwards; }
+  @keyframes sdkClear { 0% { background-color: var(--hl-sel); } 100% { background-color: var(--bg); } }
+  @keyframes sdkFade { 0% { opacity: 1; } 100% { opacity: 0; } }
+  #sdk.paused .c .v, #sdk.paused .c .nt { visibility: hidden; }
+  #sdk.paused .c { background: var(--bg) !important; }
+
+  #sdk .sdk-pauseov { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; z-index: 10; cursor: pointer; }
+  #sdk.paused .sdk-pauseov { display: flex; }
+  #sdk .sdk-bigplay { background: none; border: 0; padding: 0; cursor: pointer; width: 76px; height: 76px; }
+  #sdk .sdk-bigplay svg { width: 100%; height: 100%; }
+  #sdk .sdk-bigplay circle { fill: var(--green); }
+  #sdk .sdk-bigplay path { fill: #fff; }
+
+  #sdk .sdk-tip {
+    position: absolute; left: 20px; right: 20px; bottom: 20px; z-index: 5;
+    background: var(--green); color: #fff; border-radius: 5px; padding: 15px 24px;
+    font-size: 14px; line-height: 1.43; text-align: center; pointer-events: none;
+    box-shadow: 0 5px 8px rgba(35, 40, 30, .25); opacity: 0; transition: opacity .3s ease-in-out;
+  }
+  #sdk.tipon .sdk-tip { opacity: 1; }
+  #sdk.paused .sdk-tip { opacity: 0; }
+
+  /* 보드 위 레이어 (게임 오버·승리) */
+  #sdk .sdk-layer { position: absolute; inset: -6px; z-index: 40; display: flex; align-items: center; justify-content: center; background: rgba(35, 40, 30, .62); border-radius: 6px; padding: 12px; }
+  #sdk .sdk-layer-win { background: rgba(254, 253, 250, .9); align-items: flex-start; overflow: auto; }
+  #sdk .sdk-card { background: var(--bg); border-radius: 10px; width: min(320px, 100%); padding: 26px 22px 18px; text-align: center; box-shadow: 0 8px 28px rgba(35, 40, 30, .2); }
+  #sdk .sdk-card-title { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+  #sdk .sdk-card-desc { color: var(--muted); font-size: 15px; margin-bottom: 22px; }
+  #sdk .sdk-linkbtn { margin-top: 14px; background: none; border: 0; color: var(--green); font-size: 15px; font-weight: 600; cursor: pointer; padding: 6px 10px; }
+  #sdk .sdk-wincard { margin-top: 6%; }
+  #sdk .sdk-winstats { margin: 18px 0 8px; display: grid; gap: 0; }
+  #sdk .sdk-winstats > div { display: flex; justify-content: space-between; padding: 9px 4px; border-bottom: 1px solid var(--line); font-size: 15px; }
+  #sdk .sdk-winstats dt { color: var(--muted); font-weight: 500; }
+  #sdk .sdk-winstats dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
+  #sdk .sdk-winnote { min-height: 0; margin: 6px 0 0; font-size: 13px; color: var(--green); font-weight: 600; }
+  #sdk .sdk-winnote:empty { display: none; }
+  #sdk .sdk-wintop { text-align: left; margin: 14px 0 4px; }
+  #sdk .sdk-wincard .sdk-mainbtn { margin-top: 16px; }
+
+  /* ── 큰 버튼 ─────────────────────────── */
+  #sdk .sdk-mainbtn { display: flex; align-items: center; justify-content: center; width: 100%; height: 56px; border: 0; border-radius: 6px; background: var(--green); color: #fff; font-size: 17px; font-weight: 600; cursor: pointer; transition: background-color .2s; }
+  #sdk .sdk-mainbtn:hover { background: #287a1f; }
+  #sdk .sdk-subbtn { display: flex; align-items: center; justify-content: center; width: 100%; height: 48px; border: 0; border-radius: 6px; background: var(--ctl); color: var(--ink); font-size: 16px; font-weight: 600; cursor: pointer; }
+  #sdk .sdk-newgame { margin-bottom: 16px; }
+
+  /* ── 도구 ─────────────────────────────── */
+  #sdk .sdk-controls { position: relative; }
+  #sdk .sdk-tools { display: flex; justify-content: space-between; width: 95%; margin: 0 auto 30px; }
+  #sdk .sdk-tool { position: relative; background: none; border: 0; padding: 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; width: 22%; }
+  #sdk .sdk-toolic { position: relative; display: flex; align-items: center; justify-content: center; width: 100%; max-width: 64px; aspect-ratio: 1 / 1; border-radius: 50%; background: var(--ctl); transition: background-color .15s; }
+  #sdk .sdk-tool:hover .sdk-toolic { background: var(--ctl-h); }
+  #sdk .sdk-toolic svg { width: 52%; height: 52%; fill: none; stroke: var(--green); stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+  #sdk .sdk-toollabel { position: absolute; top: 100%; margin-top: 4px; color: var(--green); font-size: 12px; font-weight: 500; line-height: 1.5; white-space: nowrap; }
+  #sdk .sdk-tool.off .sdk-toolic svg { stroke: #A9AC9F; }
+  #sdk .sdk-tool.off .sdk-toollabel { color: #A9AC9F; }
+  #sdk .sdk-badge { position: absolute; font-style: normal; color: #fff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; height: 20px; border: 2px solid var(--bg); box-sizing: content-box; }
+  #sdk .sdk-badge-pill { right: -10%; top: -4%; padding: 0 5px; border-radius: 10px; background: #A9AC9F; letter-spacing: .3px; }
+  #sdk.notes .sdk-badge-pill { background: var(--green); }
+  #sdk .sdk-badge-dot { right: -4%; top: -4%; width: 20px; border-radius: 50%; background: var(--green); }
+  #sdk .sdk-tool.off .sdk-badge-dot { background: #A9AC9F; }
+
+  /* ── 숫자 패드 ───────────────────────── */
+  #sdk .sdk-numpad { display: grid; grid-template-columns: repeat(9, 1fr); gap: 0; }
+  #sdk .sdk-numpad button { background: transparent; border: 0; border-radius: 5px; color: var(--green); cursor: pointer; font-size: clamp(26px, 8.4vw, 40px); font-weight: 400; height: 60px; padding: 0; transition: background-color .1s ease-in-out; font-variant-numeric: tabular-nums; }
+  #sdk .sdk-numpad button:active { background: var(--ctl-h); }
+  #sdk .sdk-numpad button.done { visibility: hidden; pointer-events: none; }
+  #sdk.notes .sdk-numpad button { color: var(--muted); }
+
+  @media (min-width: 801px) {
+    #sdk .sdk-stats { margin-bottom: 18px; }
+    #sdk .sdk-newgame { margin-bottom: 18px; }
+    #sdk .sdk-numpad { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    #sdk .sdk-numpad button { background: var(--ctl); height: auto; aspect-ratio: 1 / 1; font-size: 38px; max-height: 92px; aspect-ratio: auto; height: clamp(64px, 9vw, 92px); }
+    #sdk .sdk-numpad button:hover { background: var(--ctl-h); }
+    #sdk .sdk-tools { margin-bottom: 34px; }
+  }
+  @media (max-width: 800px) {
+    #sdk .sdk-gamewrap { margin-bottom: 14px; }
+    #sdk .sdk-tools { margin-bottom: 26px; }
+    #sdk .sdk-toolic { max-width: 50px; background: transparent; }
+    #sdk .sdk-tool:hover .sdk-toolic { background: transparent; }
+    #sdk .sdk-toolic svg { width: 62%; height: 62%; }
+    #sdk .sdk-newgame { margin-top: 14px; }
+    #sdk .sdk-score { font-size: 18px; }
+    #sdk .sdk-cup { width: 18px; height: 18px; }
+    #sdk .sdk-stat-time { gap: 6px; }
+    #sdk .sdk-pausebtn { width: 30px; height: 30px; }
+  }
+
+  /* ── 스마트 힌트 ─────────────────────── */
+  #sdk .sdk-hintbox { position: absolute; left: 0; right: 0; top: 0; min-height: 150px; z-index: 20; background: var(--bg); border-radius: 6px; box-shadow: 0 4px 20px rgba(35, 40, 30, .16); padding: 22px 20px 16px; box-sizing: border-box; }
+  #sdk .sdk-hintclose { position: absolute; right: 8px; top: 8px; width: 30px; height: 30px; background: none; border: 0; cursor: pointer; padding: 4px; }
+  #sdk .sdk-hintclose svg { width: 100%; height: 100%; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; }
+  #sdk .sdk-hintname { font-size: 19px; font-weight: 700; text-align: center; margin-bottom: 6px; }
+  #sdk .sdk-hintdesc { color: var(--muted); font-size: 15px; font-weight: 500; line-height: 1.38; text-align: center; min-height: 42px; }
+  #sdk .sdk-hintdesc b { color: var(--green); font-weight: 700; }
+  #sdk .sdk-hintnav { position: relative; display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
+  #sdk .sdk-hintarrow, #sdk .sdk-hintok { width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--ctl); display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+  #sdk .sdk-hintarrow:disabled { opacity: .35; cursor: default; }
+  #sdk .sdk-hintarrow svg, #sdk .sdk-hintok svg { width: 22px; height: 22px; fill: none; stroke: var(--green); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  #sdk .sdk-hintok { position: absolute; right: 0; top: 0; background: var(--green); }
+  #sdk .sdk-hintok svg { stroke: #fff; }
+  #sdk .sdk-hintdots { display: flex; gap: 6px; }
+  #sdk .sdk-hintdots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
+  #sdk .sdk-hintdots i.on { background: var(--green); }
+  @media (max-width: 800px) {
+    #sdk .sdk-hintbox { top: -6px; box-shadow: 0 -5px 20px rgba(35, 40, 30, .2); }
+  }
+
+  /* ── 모달 (새 게임 메뉴·확인) ─────────── */
+  #sdk .sdk-modal { position: fixed; inset: 0; z-index: 50; background: rgba(35, 40, 30, .35); display: flex; align-items: center; justify-content: center; padding: 16px; }
+  #sdk .sdk-menu { background: var(--bg); border-radius: 10px; width: min(320px, 100%); padding: 20px 18px 14px; box-shadow: 0 8px 28px rgba(35, 40, 30, .2); }
+  #sdk .sdk-menu-head { font-size: 18px; font-weight: 700; text-align: center; }
+  #sdk .sdk-menu-sub { color: var(--muted); font-size: 13px; text-align: center; margin: 4px 0 14px; }
+  #sdk .sdk-menu-item { display: flex; align-items: center; gap: 12px; width: 100%; background: none; border: 0; border-radius: 6px; padding: 11px 12px; font-size: 16px; font-weight: 600; color: var(--ink); cursor: pointer; text-align: left; }
+  #sdk .sdk-menu-item:hover { background: var(--pale); }
+  #sdk .sdk-menu-item.active { color: var(--green); }
+  #sdk .sdk-menu-ic { width: 22px; height: 22px; display: flex; }
+  #sdk .sdk-menu-ic svg { width: 100%; height: 100%; fill: none; stroke: var(--green); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  #sdk .sdk-menu-item[data-act="restart"] { border-top: 1px solid var(--line); border-radius: 0 0 6px 6px; margin-top: 4px; }
+  #sdk .sdk-menu-cancel { display: block; margin: 8px auto 0; background: none; border: 0; color: var(--muted); font-size: 15px; font-weight: 600; cursor: pointer; padding: 8px 14px; }
+  #sdk .sdk-check { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 14px; color: var(--muted); margin-bottom: 14px; cursor: pointer; }
+  #sdk .sdk-check input { accent-color: var(--green); width: 16px; height: 16px; }
+  #sdk .sdk-confirm-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  #sdk .sdk-confirm-btns .sdk-mainbtn { height: 48px; font-size: 16px; }
+
+  /* ── TOP 5 ───────────────────────────── */
+  #sdk .sdk-board5 { margin-top: 36px; padding-top: 18px; border-top: 1px solid var(--line); max-width: 500px; }
+  #sdk .sdk-toptitle { font-size: 14px; font-weight: 700; margin-bottom: 8px; color: var(--ink); }
+  #sdk .sdk-toptitle span { color: var(--muted); font-weight: 500; font-size: 12px; margin-left: 6px; }
+  #sdk .sdk-toplist { list-style: none; margin: 0; padding: 0; font-variant-numeric: tabular-nums; }
+  #sdk .sdk-toplist li { display: grid; grid-template-columns: 24px 1fr auto; gap: 8px; padding: 6px 4px; border-bottom: 1px solid var(--line); font-size: 14px; }
+  #sdk .sdk-toplist li:last-child { border-bottom: 0; }
+  #sdk .sdk-toplist .rk { color: var(--muted); font-weight: 700; }
+  #sdk .sdk-toplist .nm { font-family: ui-monospace, monospace; font-weight: 700; letter-spacing: .5px; }
+  #sdk .sdk-toplist .tm { font-weight: 600; }
+  #sdk .sdk-toplist li.me { background: var(--pale); }
+  #sdk .sdk-toplist li.empty { color: var(--muted); display: block; }
+</style>
+
+<script is:inline data-astro-rerun>
+// 스도쿠 — sudoku.com/ko 클래식 모드의 규칙·UI를 따라 만든 클론 (쉬움·어려움 두 난이도).
+// 퍼즐은 클라이언트에서 만든다: 무작위 완성판 → 셀을 하나씩 지우며 해답 유일성 검사.
+// ViewTransitions 환경: data-astro-rerun으로 재방문마다 다시 돌고, astro:before-swap에서 정리한다.
+(() => {
+const root = document.getElementById('sdk');
+if (!root) return;
+const $ = id => document.getElementById(id);
+
+// ── 수명 관리 ─────────────────────────────────────────────
+const ac = new AbortController();
+let dead = false, tickId = 0;
+const on = (t, ev, fn, opts) => t.addEventListener(ev, fn, Object.assign({ signal: ac.signal }, opts));
+document.addEventListener('astro:before-swap', () => {
+  try { save(); } catch (e) {}
+  dead = true; ac.abort(); clearInterval(tickId);
+}, { once: true });
+
+const TB = window.TurtleBoard || null;
+
+// ── 상수 (원본 번들 값) ───────────────────────────────────
+const DIFF = {
+  easy: { label: '쉬움', base: 50, min: 5, step: 5 },
+  hard: { label: '어려움', base: 210, min: 21, step: 21 },
+};
+const SCORE_TIME = 5000;     // time: 5 (초)
+const MAX_MIS = 3;           // COUNT_MISTAKES
+const MAX_HINTS = 3;         // COUNT_HINTS
+const SAVE_KEY = 'turtle-sudoku-save';
+const BEST_KEY = 'turtle-sudoku-best';
+const NOASK_KEY = 'turtle-sudoku-noask';
+
+// ── 좌표 테이블 ───────────────────────────────────────────
+const RI = new Uint8Array(81), CI = new Uint8Array(81), BI = new Uint8Array(81);
+for (let i = 0; i < 81; i++) { RI[i] = (i / 9) | 0; CI[i] = i % 9; BI[i] = ((RI[i] / 3) | 0) * 3 + ((CI[i] / 3) | 0); }
+const UNITS = [];      // 0-8 행, 9-17 열, 18-26 블록
+for (let r = 0; r < 9; r++) { const u = []; for (let c = 0; c < 9; c++) u.push(r * 9 + c); UNITS.push(u); }
+for (let c = 0; c < 9; c++) { const u = []; for (let r = 0; r < 9; r++) u.push(r * 9 + c); UNITS.push(u); }
+for (let b = 0; b < 9; b++) { const u = []; const r0 = ((b / 3) | 0) * 3, c0 = (b % 3) * 3; for (let k = 0; k < 9; k++) u.push((r0 + ((k / 3) | 0)) * 9 + c0 + (k % 3)); UNITS.push(u); }
+const UOF = [];        // 셀 → [행, 열, 블록] 유닛 번호
+for (let i = 0; i < 81; i++) UOF.push([RI[i], 9 + CI[i], 18 + BI[i]]);
+const PEERS = [];
+for (let i = 0; i < 81; i++) {
+  const s = new Set();
+  for (const u of UOF[i]) for (const j of UNITS[u]) if (j !== i) s.add(j);
+  PEERS.push([...s]);
+}
+const POP = new Uint8Array(1024);
+for (let m = 1; m < 1024; m++) POP[m] = POP[m >> 1] + (m & 1);
+const ALL = 0x3FE;     // 비트 1..9
+
+const rnd = n => Math.floor(Math.random() * n);
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = rnd(i + 1); const t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+
+// ── 솔버: 해답 개수 세기 (MRV + 비트마스크) ───────────────
+// banCell/banVal: 그 셀에 그 값을 금지한 채로 센다 — 지운 셀이 원래 값이 아닌 다른 해답을 갖는지 보는 데 쓴다.
+function countSolutions(src, limit, banCell, banVal) {
+  const g = Int8Array.from(src);
+  const rm = new Uint16Array(9), cm = new Uint16Array(9), bm = new Uint16Array(9);
+  const emp = [];
+  for (let i = 0; i < 81; i++) {
+    const v = g[i];
+    if (v) { const m = 1 << v; rm[RI[i]] |= m; cm[CI[i]] |= m; bm[BI[i]] |= m; } else emp.push(i);
+  }
+  const n = emp.length;
+  const ban = banCell >= 0 ? ~(1 << banVal) : -1;
+  let count = 0;
+  function rec(d) {
+    if (d === n) { count++; return count >= limit; }
+    let best = d, bm0 = 0, bc = 10;
+    for (let k = d; k < n; k++) {
+      const i = emp[k];
+      let m = ~(rm[RI[i]] | cm[CI[i]] | bm[BI[i]]) & ALL;
+      if (i === banCell) m &= ban;
+      const c = POP[m];
+      if (c < bc) { bc = c; best = k; bm0 = m; if (c <= 1) break; }
+    }
+    if (bc === 0) return false;
+    const t = emp[d]; emp[d] = emp[best]; emp[best] = t;
+    const i = emp[d], r = RI[i], c = CI[i], b = BI[i];
+    let m = bm0;
+    while (m) {
+      const bit = m & -m; m ^= bit;
+      rm[r] |= bit; cm[c] |= bit; bm[b] |= bit;
+      if (rec(d + 1)) return true;
+      rm[r] ^= bit; cm[c] ^= bit; bm[b] ^= bit;
+    }
+    return false;
+  }
+  rec(0);
+  return count;
+}
+
+function fullGrid() {
+  const g = new Int8Array(81);
+  const rm = new Uint16Array(9), cm = new Uint16Array(9), bm = new Uint16Array(9);
+  const digits = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+  function rec(i) {
+    if (i === 81) return true;
+    const r = RI[i], c = CI[i], b = BI[i];
+    const used = rm[r] | cm[c] | bm[b];
+    for (const v of shuffle(digits.slice())) {
+      const bit = 1 << v;
+      if (used & bit) continue;
+      g[i] = v; rm[r] |= bit; cm[c] |= bit; bm[b] |= bit;
+      if (rec(i + 1)) return true;
+      rm[r] ^= bit; cm[c] ^= bit; bm[b] ^= bit; g[i] = 0;
+    }
+    return false;
+  }
+  rec(0);
+  return g;
+}
+
+// 사람식 기초 기법(확실한 숫자·숨겨진 숫자)만으로 풀리는가 — 난이도 판정용
+function singlesSolvable(src) {
+  const g = Int8Array.from(src);
+  for (;;) {
+    let progress = false, empty = 0;
+    const cand = new Uint16Array(81);
+    for (let i = 0; i < 81; i++) {
+      if (g[i]) continue;
+      empty++;
+      let m = ALL;
+      for (const j of PEERS[i]) if (g[j]) m &= ~(1 << g[j]);
+      if (!m) return false;
+      cand[i] = m;
+    }
+    if (!empty) return true;
+    for (let i = 0; i < 81; i++) {
+      if (!g[i] && POP[cand[i]] === 1) { g[i] = 31 - Math.clz32(cand[i]); progress = true; }
+    }
+    if (progress) continue;
+    for (let u = 0; u < 27 && !progress; u++) {
+      for (let v = 1; v <= 9; v++) {
+        const bit = 1 << v; let at = -1, cnt = 0, placed = false;
+        for (const j of UNITS[u]) { if (g[j] === v) { placed = true; break; } if (!g[j] && (cand[j] & bit)) { cnt++; at = j; } }
+        if (!placed && cnt === 1) { g[at] = v; progress = true; break; }
+      }
+    }
+    if (!progress) return false;
+  }
+}
+
+// 퍼즐 생성. 쉬움 36~40 단서(기초 기법으로 풀림), 어려움 24~27 단서(기초 기법만으로는 막힘).
+// 시간 예산을 넘기면 그때까지 가장 나은 후보를 쓴다.
+function generate(diff) {
+  const t0 = performance.now();
+  const BUDGET = 260;
+  let best = null, bestScore = 1e9;
+  for (let attempt = 0; ; attempt++) {
+    const sol = fullGrid();
+    const p = Int8Array.from(sol);
+    const order = shuffle([...Array(81).keys()]);
+    let clues = 81;
+    if (diff === 'easy') {
+      const target = 36 + rnd(5);
+      for (const i of order) {
+        if (clues <= target) break;
+        const v = p[i]; p[i] = 0;
+        if (countSolutions(p, 1, i, v) > 0) p[i] = v; else clues--;
+      }
+      const score = (singlesSolvable(p) ? 0 : 10) + Math.max(0, clues - 40);
+      if (score < bestScore) { best = { p, sol, clues }; bestScore = score; }
+    } else {
+      const removed = [];
+      for (const i of order) {
+        const v = p[i]; p[i] = 0;
+        if (countSolutions(p, 1, i, v) > 0) p[i] = v; else { clues--; removed.push(i); }
+      }
+      if (clues < 24) {                      // 너무 적으면 되살려 24로 (유일성은 유지된다)
+        shuffle(removed);
+        while (clues < 24) { const i = removed.pop(); p[i] = sol[i]; clues++; }
+      }
+      const score = (clues > 27 ? (clues - 27) * 3 : 0) + (singlesSolvable(p) ? 2 : 0);
+      if (score < bestScore) { best = { p, sol, clues }; bestScore = score; }
+    }
+    if (bestScore === 0) break;
+    if (performance.now() - t0 > BUDGET) break;
+  }
+  return { puzzle: Array.from(best.p), solution: Array.from(best.sol), clues: best.clues, ms: performance.now() - t0 };
+}
+
+// ── 게임 상태 ─────────────────────────────────────────────
+let S = null;          // 저장 가능한 상태
+let undo = [];         // 실행 취소 스택 (원본도 새로고침 후엔 비어 있다)
+let sel = -1;
+let notesMode = false;
+let paused = false, autoPaused = false;
+let acc = 0, runStart = null;   // 일시정지를 뺀 경과 시간
+let hint = null;       // 열린 스마트 힌트 {target, value, steps, step, areas}
+let busy = false;      // 승리 연출 중
+
+const now = () => acc + (runStart !== null ? performance.now() - runStart : 0);
+function runTimer() { if (runStart === null) runStart = performance.now(); }
+function stopTimer() { if (runStart !== null) { acc += performance.now() - runStart; runStart = null; } }
+
+function freshState(diff, gen) {
+  return {
+    v: 1, diff,
+    puzzle: gen.puzzle, sol: gen.solution,
+    val: gen.puzzle.slice(),
+    lock: gen.puzzle.map(x => (x ? 1 : 0)),   // 1 = 주어진 숫자, 2 = 힌트로 채움 (둘 다 수정 불가)
+    notes: new Array(81).fill(0),
+    mistakes: 0, hints: MAX_HINTS, score: 0, scored: [],
+    lastCorrect: 0, elapsed: 0, state: 'play', touched: false,
+  };
+}
+
+function startNew(diff) {
+  closeHint();
+  const gen = generate(diff);
+  S = freshState(diff, gen);
+  undo = []; sel = -1; paused = false; autoPaused = false; busy = false;
+  acc = 0; runStart = null; runTimer();
+  root.classList.add('tipon');
+  hideLayers();
+  render(); save();
+}
+
+// 다시 시작 = 같은 난이도의 새 퍼즐 (원본은 같은 판을 처음부터지만, 사용자 요청으로 새 숫자를 뽑는다)
+function restart() { startNew(S.diff); }
+
+// ── 저장·불러오기 ─────────────────────────────────────────
+function save() {
+  if (!S) return;
+  if (S.state === 'won') { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} return; }
+  S.elapsed = Math.round(now());
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) {}
+}
+function load() {
+  try {
+    const o = JSON.parse(localStorage.getItem(SAVE_KEY));
+    if (!o || o.v !== 1 || !DIFF[o.diff] || !Array.isArray(o.val) || o.val.length !== 81 ||
+        !Array.isArray(o.sol) || o.sol.length !== 81 || o.state === 'won') return null;
+    return o;
+  } catch (e) { return null; }
+}
+function readBest() { try { return JSON.parse(localStorage.getItem(BEST_KEY)) || {}; } catch (e) { return {}; } }
+function writeBest(b) { try { localStorage.setItem(BEST_KEY, JSON.stringify(b)); } catch (e) {} }
+
+// ── 보드 DOM ──────────────────────────────────────────────
+const boardEl = $('sdkBoard');
+const cells = [], vEls = [], noteEls = [];
+for (let i = 0; i < 81; i++) {
+  const d = document.createElement('div');
+  let cls = 'c';
+  const c = CI[i], r = RI[i];
+  if (c === 2 || c === 5) cls += ' br';
+  if (r === 2 || r === 5) cls += ' bb';
+  if (c === 8) cls += ' er';
+  if (r === 8) cls += ' eb';
+  d.className = cls;
+  d.dataset.i = i;
+  const v = document.createElement('span'); v.className = 'v';
+  const nt = document.createElement('div'); nt.className = 'nt';
+  const ns = [];
+  for (let k = 1; k <= 9; k++) { const s = document.createElement('span'); nt.appendChild(s); ns.push(s); }
+  d.appendChild(v); d.appendChild(nt);
+  boardEl.appendChild(d);
+  cells.push(d); vEls.push(v); noteEls.push(ns);
+}
+const padBtns = [...document.querySelectorAll('#sdkPad button')];
+
+// ── 판정 도우미 ───────────────────────────────────────────
+const editable = i => S.lock[i] === 0;
+const isRight = i => S.val[i] !== 0 && S.val[i] === S.sol[i];
+function digitDone(n) {
+  let k = 0;
+  for (let i = 0; i < 81; i++) if (S.val[i] === n && S.sol[i] === n) k++;
+  return k >= 9;
+}
+function unitDone(u) { for (const j of UNITS[u]) if (!isRight(j)) return false; return true; }
+function curBase() {
+  const D = DIFF[S.diff];
+  return Math.max(D.base - Math.floor((now() - S.lastCorrect) / SCORE_TIME) * D.step, D.min);
+}
+
+// ── 렌더 ──────────────────────────────────────────────────
+function render() {
+  if (!S) return;
+  const sv = sel >= 0 ? S.val[sel] : 0;
+  // 충돌: 같은 행·열·블록에 같은 값이 둘 이상
+  const conf = new Uint8Array(81);
+  for (let u = 0; u < 27; u++) {
+    const seen = {};
+    for (const j of UNITS[u]) { const v = S.val[j]; if (v) (seen[v] = seen[v] || []).push(j); }
+    for (const k in seen) if (seen[k].length > 1) for (const j of seen[k]) conf[j] = 1;
+  }
+  const shA = hint ? hint.areaSet : null;
+  for (let i = 0; i < 81; i++) {
+    const d = cells[i], v = S.val[i];
+    let cls = d.className.replace(/\s(?:user|bad|area|same|conf|sel|sh-area|sh-target)\b/g, '');
+    if (v && S.lock[i] !== 1) cls += ' user';
+    if (v && v !== S.sol[i]) cls += ' bad';
+    if (hint) {
+      if (i === hint.target) cls += ' sh-target';
+      else if (shA && shA.has(i)) cls += ' sh-area';
+    } else {
+      if (i === sel) cls += ' sel';
+      else if (conf[i] && v === S.sol[i]) cls += ' conf';   // 틀린 숫자와 부딪히는 쪽 (틀린 셀은 빨간 글자)
+      else if (sel < 0) { /* 선택 없음 */ }
+      else if (sv && v === sv) cls += ' same';
+      else if (RI[i] === RI[sel] || CI[i] === CI[sel] || BI[i] === BI[sel]) cls += ' area';
+    }
+    if (cls !== d.className) d.className = cls;
+    const txt = v ? String(v) : '';
+    if (vEls[i].textContent !== txt) vEls[i].textContent = txt;
+    const nm = v ? 0 : S.notes[i];
+    const ns = noteEls[i];
+    for (let k = 1; k <= 9; k++) {
+      const t = (nm >> k) & 1 ? String(k) : '';
+      if (ns[k - 1].textContent !== t) ns[k - 1].textContent = t;
+      const hot = t && sv === k;
+      if (ns[k - 1].classList.contains('hot') !== !!hot) ns[k - 1].classList.toggle('hot', !!hot);
+    }
+  }
+  // 통계
+  $('sdkScore').textContent = S.score;
+  $('sdkMis').textContent = S.mistakes;
+  $('sdkDiffText').textContent = DIFF[S.diff].label;
+  for (const b of root.querySelectorAll('[data-diff]')) b.classList.toggle('active', b.dataset.diff === S.diff);
+  renderTime();
+  // 도구
+  $('sdkNoteBadge').textContent = notesMode ? 'ON' : 'OFF';
+  root.classList.toggle('notes', notesMode);
+  $('sdkHintBadge').textContent = S.hints;
+  root.querySelector('[data-act="hint"]').classList.toggle('off', S.hints <= 0);
+  for (const b of padBtns) b.classList.toggle('done', digitDone(+b.dataset.n));
+  root.classList.toggle('paused', paused);
+}
+function fmtClock(ms) {
+  const s = Math.floor(ms / 1000), h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, x = s % 60;
+  const p2 = n => String(n).padStart(2, '0');
+  return h ? h + ':' + p2(m) + ':' + p2(x) : p2(m) + ':' + p2(x);
+}
+function renderTime() { $('sdkTime').textContent = fmtClock(now()); }
+
+// ── 점수 ──────────────────────────────────────────────────
+function award(i, v, isHint) {
+  const key = i * 10 + v;
+  if (S.scored.includes(key)) return [];
+  S.scored.push(key);
+  const done = UOF[i].filter(unitDone);
+  const mult = done.length ? done.length * 5 : 1;
+  const base = isHint ? DIFF[S.diff].base : curBase();
+  const gain = base * mult;
+  S.score += gain;
+  S.lastCorrect = now();
+  const el = $('sdkScoreAdd');
+  el.textContent = '+' + gain;
+  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+  return done;
+}
+
+// 완성된 행·열·블록을 입력 셀에서 바깥으로 물결처럼
+function waveUnits(i, units) {
+  const delays = new Map();
+  for (const u of units) for (const j of UNITS[u]) {
+    const d = Math.max(Math.abs(RI[j] - RI[i]), Math.abs(CI[j] - CI[i]));
+    delays.set(j, Math.min(delays.has(j) ? delays.get(j) : 99, d));
+  }
+  for (const [j, d] of delays) {
+    setTimeout(() => {
+      if (dead) return;
+      const c = cells[j]; c.classList.remove('wave'); void c.offsetWidth; c.classList.add('wave');
+      setTimeout(() => c.classList.remove('wave'), 520);
+    }, d * 35);
+  }
+}
+
+// 같은 행·열·블록의 메모에서 v를 지운다 (원본 autoRemoveNotes, 틀린 값이어도 지운다)
+function clearNearNotes(i, v) {
+  const bit = 1 << v, near = [];
+  for (const j of PEERS[i]) if (S.notes[j] & bit) { near.push([j, S.notes[j]]); S.notes[j] &= ~bit; }
+  return near;
+}
+
+function afterChange(lastCell) {
+  // 다 놓인 숫자는 판 전체 메모에서 지운다 (removeNumberInNotes)
+  for (let n = 1; n <= 9; n++) if (digitDone(n)) { const bit = 1 << n; for (let i = 0; i < 81; i++) S.notes[i] &= ~bit; }
+  let won = true;
+  for (let i = 0; i < 81; i++) if (S.val[i] !== S.sol[i]) { won = false; break; }
+  render();
+  if (won) { win(lastCell); return; }
+  save();
+}
+
+function touch() {
+  if (!S.touched) { S.touched = true; }
+  root.classList.remove('tipon');
+}
+
+// ── 입력 ──────────────────────────────────────────────────
+// 진행을 막는 상태면 true (일시정지는 풀기만 하고 입력은 버린다)
+function blocked() {
+  if (busy) return true;
+  if (S.state === 'over') { showOver(); return true; }
+  if (S.state !== 'play') return true;
+  if (paused) { setPaused(false); return true; }
+  return false;
+}
+
+function inputNumber(n) {
+  if (blocked()) return;
+  closeHint();
+  if (sel < 0 || !editable(sel)) return;
+  if (notesMode) { toggleNote(sel, n); return; }
+  if (digitDone(n) && S.val[sel] !== n) return;
+  const i = sel, prev = S.val[i], prevNotes = S.notes[i];
+  const nv = prev === n ? 0 : n;                // 같은 숫자를 다시 누르면 지운다
+  const near = nv ? clearNearNotes(i, nv) : [];
+  undo.push({ i, val: prev, notes: prevNotes, near });
+  S.val[i] = nv; S.notes[i] = 0;
+  touch();
+  if (nv) {
+    if (nv !== S.sol[i]) {
+      S.mistakes++;
+      if (S.mistakes >= MAX_MIS) { render(); gameOver(); save(); return; }
+    } else {
+      const done = award(i, nv, false);
+      if (done.length) waveUnits(i, done);
+    }
+  }
+  afterChange(i);
+}
+
+function toggleNote(i, n) {
+  const bit = 1 << n;
+  undo.push({ i, val: S.val[i], notes: S.notes[i], near: [] });
+  if (S.val[i]) { S.val[i] = 0; }
+  S.notes[i] ^= bit;
+  touch();
+  afterChange(i);
+}
+
+function erase() {
+  if (blocked()) return;
+  closeHint();
+  if (sel < 0 || !editable(sel)) return;
+  const i = sel;
+  if (!S.val[i] && !S.notes[i]) return;
+  undo.push({ i, val: S.val[i], notes: S.notes[i], near: [] });
+  S.val[i] = 0; S.notes[i] = 0;
+  touch();
+  afterChange(i);
+}
+
+function doUndo() {
+  if (blocked()) return;
+  closeHint();
+  const e = undo.pop();
+  if (!e) return;
+  S.val[e.i] = e.val; S.notes[e.i] = e.notes;
+  for (const [j, m] of e.near) S.notes[j] = m;
+  sel = e.i;                                    // 실수 횟수는 되돌리지 않는다
+  afterChange(e.i);
+}
+
+function toggleNotes() {
+  if (busy || S.state === 'won') return;
+  if (paused) { setPaused(false); return; }
+  notesMode = !notesMode;
+  render();
+}
+
+function select(i) {
+  if (busy || S.state === 'won') return;
+  if (paused) { setPaused(false); return; }
+  if (hint) closeHint();
+  sel = i;
+  render();
+}
+
+function move(dk) {
+  if (busy || S.state === 'won') return;
+  if (paused) { setPaused(false); return; }
+  if (hint) closeHint();
+  if (sel < 0) { sel = 0; render(); return; }
+  let n = sel;
+  if (dk === 'L' && n % 9 !== 0) n--;
+  if (dk === 'R' && n % 9 !== 8) n++;
+  if (dk === 'U' && n > 8) n -= 9;
+  if (dk === 'D' && n < 72) n += 9;
+  sel = n; render();
+}
+
+// ── 힌트 ──────────────────────────────────────────────────
+const HT = {
+  LastFreeCell: { name: '마지막 빈 셀', desc: {
+    row: ['[c1]이 행[/c1]을 봅시다', '비어있는 셀이 하나뿐이므로, <br />이 셀에 들어갈 수 있는 숫자는 (N)밖에 없습니다'],
+    col: ['[c1]이 열[/c1]을 봅시다', '비어있는 셀이 하나뿐이므로, <br />이 셀에 들어갈 수 있는 숫자는 (N)밖에 없습니다'],
+    cube: ['[c1]이 블록[/c1]을 봅시다', '비어있는 셀이 하나뿐이므로, <br />이 셀에 들어갈 수 있는 숫자는 (N)밖에 없습니다'] } },
+  LastRemainingCell: { name: '마지막 남은 셀', desc: {
+    row: ['[c2]이 셀[/c2]과 강조된 영역을 잘 보세요', '[c1]이 행[/c1]에서 (N)이(가) <br />들어갈 수 있는 셀은 하나뿐입니다', '가능한 해답이 하나뿐이므로, <br />이 셀에는 반드시 (N)이(가) 들어갑니다'],
+    col: ['[c2]이 셀[/c2]과 강조된 영역을 잘 보세요', '[c1]이 열[/c1]에서 (N)이(가) <br />들어갈 수 있는 셀은 하나뿐입니다', '가능한 해답이 하나뿐이므로, <br />이 셀에는 반드시 (N)이(가) 들어갑니다'],
+    cube: ['[c2]이 셀[/c2]과 강조된 영역을 잘 보세요', '[c1]이 블록[/c1]에서 (N)이(가) <br />들어갈 수 있는 셀은 하나뿐입니다', '가능한 해답이 하나뿐이므로, <br />이 셀에는 반드시 (N)이(가) 들어갑니다'] } },
+  LastPossibleNumber: { name: '마지막 남은 숫자',
+    desc: ['[c1]이 셀[/c1]과 강조된 영역의 숫자를 잘 보세요', '숫자 [c2](N), (N), (N), (N), (N), (N), (N), (N)[/c2]은(는) <br />이미 행, 열, 블록에 들어있습니다', '남은 숫자는 (N)밖에 없으므로 이 <br />셀은 반드시 (N)입니다'] },
+};
+const UKIND = u => (u < 9 ? 'row' : u < 18 ? 'col' : 'cube');
+
+// 정답으로 놓인 숫자만 기준으로 후보를 계산한다 (틀린 숫자는 없는 셈 친다)
+function candOf(i) {
+  let m = ALL;
+  for (const j of PEERS[i]) if (isRight(j) || S.lock[j]) m &= ~(1 << S.val[j]);
+  return m;
+}
+const unknown = i => !isRight(i) && !S.lock[i];
+
+// 셀 i에 적용되는 기법을 찾는다
+function techFor(i) {
+  const v = S.sol[i];
+  for (const u of UOF[i]) {
+    let k = 0; for (const j of UNITS[u]) if (unknown(j)) k++;
+    if (k === 1) return { tech: 'LastFreeCell', unit: u, areas: UNITS[u] };
+  }
+  for (const u of UOF[i]) {
+    const bit = 1 << v; let k = 0;
+    for (const j of UNITS[u]) if (unknown(j) && (candOf(j) & bit)) k++;
+    if (k === 1) {
+      // 강조 영역: 그 유닛 + v를 막고 있는 셀들의 행·열·블록
+      const areas = new Set(UNITS[u]);
+      for (const j of UNITS[u]) if (j !== i && unknown(j)) {
+        for (const p of PEERS[j]) if ((isRight(p) || S.lock[p]) && S.val[p] === v) { areas.add(p); }
+      }
+      return { tech: 'LastRemainingCell', unit: u, areas: [...areas] };
+    }
+  }
+  if (POP[candOf(i)] === 1) {
+    const present = [];
+    for (let d = 1; d <= 9; d++) if (d !== v) present.push(d);
+    return { tech: 'LastPossibleNumber', unit: -1, areas: PEERS[i], present };
+  }
+  return null;
+}
+
+function buildSteps(t, i) {
+  const v = S.sol[i];
+  const H = HT[t.tech];
+  const raw = Array.isArray(H.desc) ? H.desc : H.desc[UKIND(t.unit)];
+  return raw.map(s => {
+    let k = 0;
+    s = s.replace(/\(N\)/g, () => {
+      if (t.tech === 'LastPossibleNumber' && t.present && k < 8 && s.indexOf('[c2]') >= 0) return String(t.present[k++]);
+      return String(v);
+    });
+    return s.replace(/\[c\d\]/g, '<b>').replace(/\[\/c\d\]/g, '</b>');
+  });
+}
+
+function useHint() {
+  if (blocked()) return;
+  if (S.hints <= 0) return;
+  if (hint) { applyHint(); return; }
+  // (a) 선택 셀에 틀린 숫자가 있으면 바로 정답으로
+  if (sel >= 0 && editable(sel) && S.val[sel] && S.val[sel] !== S.sol[sel]) { fillHint(sel); return; }
+  // (b) 스마트 힌트: 선택한 빈 셀에 맞는 기법 → 없으면 판 전체에서 찾는다
+  let target = -1, t = null;
+  if (sel >= 0 && unknown(sel)) { t = techFor(sel); if (t) target = sel; }
+  if (!t) {
+    const order = [];
+    for (let i = 0; i < 81; i++) if (unknown(i)) order.push(i);
+    for (const want of ['LastFreeCell', 'LastRemainingCell', 'LastPossibleNumber']) {
+      for (const i of order) { const x = techFor(i); if (x && x.tech === want) { t = x; target = i; break; } }
+      if (t) break;
+    }
+  }
+  if (!t) {
+    // 스마트 힌트를 쓸 수 없으면 선택 셀(또는 임의의 빈 셀)을 정답으로
+    let i = sel >= 0 && unknown(sel) ? sel : -1;
+    if (i < 0) { const em = []; for (let k = 0; k < 81; k++) if (unknown(k)) em.push(k); if (em.length) i = em[rnd(em.length)]; }
+    if (i >= 0) fillHint(i);
+    return;
+  }
+  hint = { target, tech: t.tech, steps: buildSteps(t, target), step: 0, areaSet: new Set(t.areas) };
+  sel = target;
+  showHint();
+}
+
+function showHint() {
+  $('sdkHintBox').hidden = false;
+  $('sdkHintName').textContent = HT[hint.tech].name;
+  $('sdkHintDesc').innerHTML = hint.steps[hint.step];
+  const dots = $('sdkHintDots'); dots.innerHTML = '';
+  hint.steps.forEach((_, k) => { const d = document.createElement('i'); if (k === hint.step) d.className = 'on'; dots.appendChild(d); });
+  const last = hint.step === hint.steps.length - 1;
+  $('sdkHintPrev').disabled = hint.step === 0;
+  $('sdkHintNext').hidden = last;
+  $('sdkHintOk').hidden = !last;
+  render();
+}
+function closeHint() {
+  if (!hint) return;
+  hint = null;
+  $('sdkHintBox').hidden = true;
+  render();
+}
+function applyHint() {
+  if (!hint) return;
+  const i = hint.target;
+  closeHint();
+  fillHint(i);
+}
+
+function fillHint(i) {
+  const v = S.sol[i];
+  S.val[i] = v; S.notes[i] = 0; S.lock[i] = 2;     // 힌트로 채운 셀은 수정 불가
+  clearNearNotes(i, v);
+  undo = undo.filter(e => e.i !== i);
+  S.hints--;
+  sel = i;
+  touch();
+  const done = award(i, v, true);                // 힌트는 실수에 안 들어가고 base 최댓값을 준다
+  if (done.length) waveUnits(i, done);
+  afterChange(i);
+}
+
+// ── 일시정지 ──────────────────────────────────────────────
+function setPaused(p) {
+  if (!S || S.state !== 'play' || busy) return;
+  if (p === paused) return;
+  paused = p;
+  if (paused) { stopTimer(); closeHint(); } else { runTimer(); autoPaused = false; }
+  render(); save();
+}
+
+// ── 게임 오버·두 번째 기회 ────────────────────────────────
+function gameOver() {
+  S.state = 'over';
+  stopTimer();
+  closeHint();
+  showOver();
+}
+function showOver() { $('sdkOver').hidden = false; }
+function secondChance() {
+  if (S.state !== 'over') return;
+  S.mistakes = Math.max(0, S.mistakes - 1);       // 3/3 → 2/3, 무료·횟수 제한 없음
+  S.state = 'play';
+  S.lastCorrect = now();
+  $('sdkOver').hidden = true;
+  runTimer();
+  render(); save();
+}
+function hideLayers() { $('sdkOver').hidden = true; $('sdkWin').hidden = true; }
+
+// ── 승리 ──────────────────────────────────────────────────
+function win(last) {
+  S.state = 'won';
+  stopTimer();
+  closeHint();
+  busy = true;
+  const ms = Math.round(now());
+  const diff = S.diff, score = S.score;
+  const best = readBest();
+  const prevBest = best[diff] || 0;
+  const isBest = score > prevBest;
+  if (isBest) { best[diff] = score; writeBest(best); }
+  try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+  sel = -1; render();
+  // 마지막 셀에서 링(체비쇼프 거리) 단위로 퍼지며 판을 정리한다
+  const c0 = last >= 0 ? last : 40;
+  let maxD = 0;
+  for (let j = 0; j < 81; j++) {
+    const d = Math.max(Math.abs(RI[j] - RI[c0]), Math.abs(CI[j] - CI[c0]));
+    maxD = Math.max(maxD, d);
+    setTimeout(() => { if (!dead) cells[j].classList.add('clear'); }, d * 70);
+  }
+  setTimeout(() => {
+    if (dead) return;
+    for (const c of cells) c.classList.remove('clear');
+    for (let j = 0; j < 81; j++) vEls[j].textContent = '';
+    for (const ns of noteEls) for (const s of ns) s.textContent = '';
+    busy = false;
+    showWin(diff, ms, score, Math.max(score, prevBest), isBest);
+  }, maxD * 70 + 600);
+}
+
+async function showWin(diff, ms, score, best, isBest) {
+  $('sdkWinDiff').textContent = DIFF[diff].label;
+  $('sdkWinTime').textContent = fmtClock(ms);
+  $('sdkWinScore').textContent = score;
+  $('sdkWinBest').textContent = best;
+  $('sdkWinNote').textContent = isBest ? '최고 점수 갱신' : '';
+  $('sdkWinTopWrap').hidden = diff !== 'hard';
+  $('sdkWin').hidden = false;
+  if (diff !== 'hard' || !TB) return;
+  let list = await TB.top('sudoku');
+  if (dead) return;
+  renderTop($('sdkWinTop'), list);
+  if (TB.qualifies(list, ms, 'sudoku')) {
+    const name = await TB.askName('TOP 5! ' + TB.fmtTime(ms));
+    if (dead) return;
+    await TB.submit('sudoku', name, ms);
+    list = await TB.top('sudoku');
+    if (dead) return;
+    renderTop($('sdkWinTop'), list, ms, name);
+    renderTop($('sdkTop'), list, ms, name);
+  }
+}
+
+function renderTop(ol, list, myMs, myName) {
+  ol.innerHTML = '';
+  if (!list || !list.length) {
+    const li = document.createElement('li'); li.className = 'empty'; li.textContent = '아직 기록이 없습니다';
+    ol.appendChild(li); return;
+  }
+  let marked = false;
+  list.forEach((row, k) => {
+    const li = document.createElement('li');
+    if (!marked && myMs != null && row.value === myMs && row.name === myName) { li.className = 'me'; marked = true; }
+    const rk = document.createElement('span'); rk.className = 'rk'; rk.textContent = k + 1;
+    const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = row.name;
+    const tm = document.createElement('span'); tm.className = 'tm'; tm.textContent = TB ? TB.fmtTime(row.value) : row.value;
+    li.append(rk, nm, tm); ol.appendChild(li);
+  });
+}
+
+// ── 새 게임 메뉴·난이도 변경 ──────────────────────────────
+const inProgress = () => S && S.state !== 'won' && S.touched;
+let pendingDiff = null, menuFromOver = false;
+function openMenu(fromOver) {
+  menuFromOver = !!fromOver;
+  $('sdkOver').hidden = true;
+  $('sdkMenu').hidden = false;
+}
+function closeMenu() {
+  $('sdkMenu').hidden = true;
+  if (menuFromOver && S.state === 'over') showOver();
+  menuFromOver = false;
+}
+function askDiff(d) {
+  closeDropdown();
+  let noAsk = false; try { noAsk = localStorage.getItem(NOASK_KEY) === '1'; } catch (e) {}
+  if (!inProgress() || noAsk || S.state === 'over') { startNew(d); return; }
+  pendingDiff = d;
+  $('sdkNoAsk').checked = false;
+  $('sdkConfirm').hidden = false;
+}
+function closeDropdown() { $('sdkDiffMenu').hidden = true; }
+const modalOpen = () => !$('sdkMenu').hidden || !$('sdkConfirm').hidden;
+
+// ── 이벤트 연결 ───────────────────────────────────────────
+on(boardEl, 'pointerdown', e => {
+  const c = e.target.closest('.c');
+  if (!c) return;
+  e.preventDefault();
+  select(+c.dataset.i);
+});
+on($('sdkPauseOv'), 'pointerdown', e => { e.preventDefault(); setPaused(false); });
+on($('sdkPad'), 'pointerdown', e => {
+  const b = e.target.closest('button[data-n]');
+  if (!b) return;
+  e.preventDefault();
+  inputNumber(+b.dataset.n);
+});
+on(root.querySelector('.sdk-tools'), 'pointerdown', e => {
+  const b = e.target.closest('.sdk-tool');
+  if (!b) return;
+  e.preventDefault();
+  const a = b.dataset.act;
+  if (a === 'undo') doUndo();
+  else if (a === 'erase') erase();
+  else if (a === 'notes') toggleNotes();
+  else if (a === 'hint') useHint();
+});
+on($('sdkPause'), 'click', () => setPaused(!paused));
+on($('sdkNewBtn'), 'click', () => openMenu(false));
+on($('sdkMenuCancel'), 'click', closeMenu);
+on($('sdkMenu'), 'click', e => {
+  if (e.target === $('sdkMenu')) { closeMenu(); return; }
+  const b = e.target.closest('.sdk-menu-item');
+  if (!b) return;
+  $('sdkMenu').hidden = true; menuFromOver = false;
+  if (b.dataset.act === 'restart') restart(); else startNew(b.dataset.diff);
+});
+on($('sdkSecond'), 'click', secondChance);
+on($('sdkOverNew'), 'click', () => openMenu(true));
+on($('sdkWinNew'), 'click', () => openMenu(false));
+for (const b of root.querySelectorAll('.sdk-diffbtn')) on(b, 'click', () => askDiff(b.dataset.diff));
+on($('sdkDiffLabel'), 'click', e => { e.stopPropagation(); $('sdkDiffMenu').hidden = !$('sdkDiffMenu').hidden; });
+for (const b of $('sdkDiffMenu').querySelectorAll('button')) on(b, 'click', e => { e.stopPropagation(); askDiff(b.dataset.diff); });
+on(document, 'click', e => { if (!e.target.closest('.sdk-stat-diff')) closeDropdown(); });
+on($('sdkConfirmNo'), 'click', () => { $('sdkConfirm').hidden = true; pendingDiff = null; });
+on($('sdkConfirmOk'), 'click', () => {
+  if ($('sdkNoAsk').checked) { try { localStorage.setItem(NOASK_KEY, '1'); } catch (e) {} }
+  $('sdkConfirm').hidden = true;
+  const d = pendingDiff; pendingDiff = null;
+  if (d) startNew(d);
+});
+on($('sdkConfirm'), 'click', e => { if (e.target === $('sdkConfirm')) { $('sdkConfirm').hidden = true; pendingDiff = null; } });
+on($('sdkHintPrev'), 'click', () => { if (hint && hint.step > 0) { hint.step--; showHint(); } });
+on($('sdkHintNext'), 'click', () => { if (hint && hint.step < hint.steps.length - 1) { hint.step++; showHint(); } });
+on($('sdkHintOk'), 'click', applyHint);
+on($('sdkHintClose'), 'click', closeHint);
+
+on(document, 'keydown', e => {
+  if (!S) return;
+  if (TB && TB.isOpen()) return;
+  const t = e.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+  if (modalOpen()) { if (e.key === 'Escape') { closeMenu(); $('sdkConfirm').hidden = true; } return; }
+  if (e.altKey) return;
+  const k = e.key, code = e.keyCode;
+  if ((e.ctrlKey || e.metaKey) && (k === 'z' || k === 'Z' || e.code === 'KeyZ')) { e.preventDefault(); doUndo(); return; }
+  if (e.ctrlKey || e.metaKey) return;
+  // 숫자는 물리 키(e.code)로 본다 — 한글 입력 모드에선 keyCode가 229로 와서 숫자를 못 알아본다
+  const dm = /^(?:Digit|Numpad)([0-9])$/.exec(e.code || '');
+  const dg = dm ? +dm[1] : (/^[0-9]$/.test(k) ? +k : -1);
+  if (dg >= 1) { e.preventDefault(); inputNumber(dg); return; }
+  if (dg === 0 || code === 8 || code === 46 || k === 'Backspace' || k === 'Delete') { e.preventDefault(); erase(); return; }
+  if (code === 37) { e.preventDefault(); move('L'); return; }
+  if (code === 38) { e.preventDefault(); move('U'); return; }
+  if (code === 39) { e.preventDefault(); move('R'); return; }
+  if (code === 40) { e.preventDefault(); move('D'); return; }
+  if (k === 'n' || k === 'N' || k === ' ' || e.code === 'KeyN') { e.preventDefault(); toggleNotes(); return; }
+  if (k === 'h' || k === 'H' || e.code === 'KeyH') { e.preventDefault(); useHint(); return; }
+  if (k === 'p' || k === 'P' || k === 'Escape' || e.code === 'KeyP') {
+    if (hint && k === 'Escape') { closeHint(); return; }
+    e.preventDefault(); setPaused(!paused); return;
+  }
+  if (k === 'Enter' && hint) { e.preventDefault(); if (hint.step < hint.steps.length - 1) { hint.step++; showHint(); } else applyHint(); }
+});
+
+// 탭이 숨겨지면 자동 일시정지, 돌아오면 자동으로 풀린다
+on(document, 'visibilitychange', () => {
+  if (!S) return;
+  if (document.hidden) {
+    if (S.state === 'play' && !paused) { setPaused(true); autoPaused = true; }
+    save();
+  } else if (autoPaused) { autoPaused = false; setPaused(false); }
+});
+on(window, 'pagehide', () => save());
+
+// ── 시작 ──────────────────────────────────────────────────
+const saved = load();
+if (saved) {
+  S = saved;
+  if (!Array.isArray(S.scored)) S.scored = [];
+  acc = S.elapsed || 0; runStart = null;
+  if (S.state === 'play') runTimer();
+  root.classList.toggle('tipon', !S.touched);
+  render();
+  if (S.state === 'over') showOver();
+} else {
+  startNew('easy');
+}
+let saveTick = 0;
+tickId = setInterval(() => {
+  if (dead) return;
+  renderTime();
+  if (++saveTick % 20 === 0 && S && S.state === 'play' && !paused) save();   // 5초마다 경과 시간 저장
+}, 250);
+if (TB) TB.top('sudoku').then(list => { if (!dead) renderTop($('sdkTop'), list); });
+else renderTop($('sdkTop'), []);
+
+})();
+</script>

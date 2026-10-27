@@ -1,0 +1,50 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import GameBoard from "../../components/GameBoard.astro";
+
+// fmt: 'score' = 점수 그대로, 'time' = 밀리초를 시간으로
+const GAMES = [
+  { id: "stack", name: "Turtle Stack", desc: "미끄러지는 판을 타이밍 맞춰 떨어뜨려 쌓는다", fmt: "score", unit: "층" },
+  { id: "apple", name: "사과게임", desc: "드래그해서 합이 10이 되는 사과를 지운다 · 2분", fmt: "score", unit: "점" },
+  { id: "sudoku", name: "스도쿠", desc: "쉬움·어려움 두 단계 · 순위는 어려움 완주 시간", fmt: "time", unit: "" },
+  { id: "tetris", name: "테트리스", desc: "40줄을 가장 빨리 지운다 · 키보드 게임", fmt: "time", unit: "" },
+];
+---
+
+<BaseLayout title="Game" sideBarActiveItemID="game">
+  <div class="mb-5">
+    <div class="text-3xl w-full font-bold font-pixel">Game</div>
+  </div>
+
+  <div class="flex flex-col gap-4">
+    {
+      GAMES.map((g) => (
+        <a href={`/game/${g.id}/`} class="rounded-2xl bg-base-200 p-5 hover:bg-secondary transition-colors">
+          <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <div class="font-pixel font-bold text-lg">{g.name}</div>
+            <div class="text-sm font-mono opacity-80" data-top={g.id} data-fmt={g.fmt} data-unit={g.unit}>
+              1위 —
+            </div>
+          </div>
+          <div class="text-sm opacity-80 mt-1">{g.desc}</div>
+        </a>
+      ))
+    }
+  </div>
+  <GameBoard />
+</BaseLayout>
+
+<script is:inline data-astro-rerun>
+// 게임마다 현재 1위 기록을 채운다. 기록이 없으면 「1위 —」 그대로.
+(() => {
+  const TB = window.TurtleBoard;
+  for (const el of document.querySelectorAll('[data-top]')) {
+    TB.top(el.dataset.top).then(list => {
+      if (!list.length || !el.isConnected) return;
+      const e = list[0];
+      const v = el.dataset.fmt === 'time' ? TB.fmtTime(e.value) : e.value + el.dataset.unit;
+      el.textContent = '1위 ' + e.name + ' · ' + v;
+    });
+  }
+})();
+</script>

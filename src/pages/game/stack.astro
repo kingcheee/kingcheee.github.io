@@ -1,18 +1,13 @@
 ---
-import BaseLayout from "../layouts/BaseLayout.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import GameBoard from "../../components/GameBoard.astro";
 ---
 
 <BaseLayout title="Turtle Stack" sideBarActiveItemID="game">
   <div id="gameWrap">
     <canvas id="cv" width="180" height="320"></canvas>
   </div>
-  <div id="nameUi">
-    <div id="nameBox">
-      <p>TOP 4!</p>
-      <input id="nameInput" maxlength="8" placeholder="NAME" autocomplete="off" enterkeyhint="done" />
-      <button id="nameOk">OK</button>
-    </div>
-  </div>
+  <GameBoard />
 </BaseLayout>
 
 <style is:global>
@@ -32,27 +27,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
   }
-  #nameUi {
-    position: fixed; inset: 0; display: none;
-    align-items: center; justify-content: center;
-    background: rgba(35, 40, 30, 0.35); z-index: 40;
-  }
-  #nameBox {
-    background: #f7f6f0; border: 3px solid #23281e;
-    padding: 14px 18px; text-align: center;
-    font-family: ui-monospace, monospace;
-  }
-  #nameBox p { margin: 0 0 10px; font-weight: bold; color: #23281e; font-size: 15px; }
-  #nameInput {
-    width: 130px; font: bold 16px ui-monospace, monospace; text-transform: uppercase;
-    text-align: center; border: 2px solid #23281e; background: #fefdfa;
-    color: #23281e; padding: 4px; outline: none;
-  }
-  #nameOk {
-    margin: 10px auto 0; display: block; font: bold 13px ui-monospace, monospace;
-    background: #2f8a25; color: #ffffff; border: 2px solid #23281e;
-    padding: 4px 16px; cursor: pointer;
-  }
 </style>
 
 <script is:inline data-astro-rerun>
@@ -63,9 +37,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 const cv = document.getElementById('cv');
 const wrap = document.getElementById('gameWrap');
 const ctx = cv.getContext('2d');
-const nameUi = document.getElementById('nameUi');
-const nameInput = document.getElementById('nameInput');
-const nameOk = document.getElementById('nameOk');
+const TB = window.TurtleBoard;
 
 const W = 180, H = 320;   // 논리 해상도 — 게임 좌표계는 전부 이 단위
 const LH = 14;            // 층 높이
@@ -152,40 +124,20 @@ const snd = {
   over:    () => beep(220, 0.35, 0.045, 70),
 };
 
-// ── 리더보드 (TOP 4, localStorage) ────────────────────────
-let board = [];
-try {
-  const raw = localStorage.getItem('turtle-stack-board');
-  if (raw) board = JSON.parse(raw).filter(e => e && typeof e.s === 'number' && typeof e.n === 'string').slice(0, 4);
-} catch (e) {}
-if (!board.length) {
-  // 옛 단일 최고기록에서 이관
-  try {
-    const old = +localStorage.getItem('turtle-stack-best') || 0;
-    if (old > 0) board = [{ n: '---', s: old }];
-  } catch (e) {}
+// ── 리더보드 (TOP 5, Supabase — GameBoard 컴포넌트) ─────────
+let board = [];                      // [{ n, s }]
+function loadBoard() {
+  return TB.top('stack').then(list => {
+    if (dead) return;
+    board = list.map(e => ({ n: e.name, s: e.value }));
+    best = Math.max(best, board.length ? board[0].s : 0);
+  });
 }
-let best = board.length ? board[0].s : 0;
-let nameActive = false, pendingScore = 0, lastEntry = null;
-
-function submitName() {
-  if (!nameActive) return;
-  const nm = nameInput.value.trim().toUpperCase().slice(0, 8) || '---';
-  lastEntry = { n: nm, s: pendingScore };
-  board.push(lastEntry);
-  board.sort((a, b) => b.s - a.s);
-  board = board.slice(0, 4);
-  best = board[0].s;
-  try { localStorage.setItem('turtle-stack-board', JSON.stringify(board)); } catch (e) {}
-  nameActive = false;
-  nameUi.style.display = 'none';
-  nameInput.blur();
-}
-on(nameOk, 'click', submitName);
-on(nameInput, 'keydown', (e) => {
-  e.stopPropagation();               // 게임 키 입력과 분리 (Space로 재시작되는 것 방지)
-  if (e.key === 'Enter') submitName();
-});
+let best = 0;
+try { best = +localStorage.getItem('turtle-stack-best') || 0; } catch (e) {}
+let lastEntry = null;
+const nameActive = () => TB.isOpen();
+loadBoard();
 
 // ── 상태 ─────────────────────────────────────────────────
 let state, layers, slab, pieces, fxs, clouds, nextCloudY;
@@ -219,7 +171,7 @@ function spawnSlab(w) {
 
 // ── 입력: keydown/pointerdown에서 즉시 발동 ────────────────
 function press() {
-  if (nameActive) return;            // 이름 입력 중에는 게임 입력 무시
+  if (nameActive()) return;            // 이름 입력 중에는 게임 입력 무시
   if (state === 'start') {
     state = 'playing';
     spawnSlab(W0);
@@ -238,7 +190,7 @@ function press() {
   }
 }
 on(window, 'keydown', (e) => {
-  if (nameActive) return;
+  if (nameActive()) return;
   if (e.code === 'Space') {
     e.preventDefault();
     if (!e.repeat) { initAudio(); press(); }  // 꾹 눌러도 연속 드랍 없음
@@ -248,7 +200,7 @@ on(window, 'keydown', (e) => {
 });
 // 헤더·다른 링크를 막지 않게 게임 영역에만 건다
 on(wrap, 'pointerdown', (e) => {
-  if (nameActive) return;
+  if (nameActive()) return;
   e.preventDefault();
   initAudio(); press();
 });
@@ -300,16 +252,24 @@ function gameOver() {
   shakeT = 0.3; shakeMag = 3;
   const s = score();
   newBest = s > best;
-  // TOP 4 진입 시 이름 입력 (죽음 연출이 지나간 뒤에 띄운다)
-  if (s > 0 && (board.length < 4 || s > board[board.length - 1].s)) {
-    pendingScore = s;
-    setTimeout(() => {
-      if (dead || state !== 'over') return;
-      nameActive = true;
-      nameUi.style.display = 'flex';
-      nameInput.value = '';
-      nameInput.focus();
-    }, 450);
+  if (newBest) {
+    best = s;
+    try { localStorage.setItem('turtle-stack-best', String(s)); } catch (e) {}
+  }
+  // TOP 5 진입 시 이름 입력 (죽음 연출이 지나간 뒤에 띄운다).
+  // 판정은 서버의 최신 목록으로 — 다른 사람이 그사이 올렸을 수 있다
+  if (s > 0) {
+    const shownAt = overAt + 450;
+    TB.top('stack').then(list => {
+      if (dead || state !== 'over' || !TB.qualifies(list, s, 'stack')) return;
+      setTimeout(() => {
+        if (dead || state !== 'over') return;
+        TB.askName().then(nm => {
+          lastEntry = { n: nm, s };
+          return TB.submit('stack', nm, s);
+        }).then(loadBoard);
+      }, Math.max(0, shownAt - performance.now()));
+    });
   }
   snd.over();
 }
@@ -610,11 +570,11 @@ function draw(now) {
     ctx.fillStyle = T.ui;
     ctx.font = 'bold 17px monospace';
     ctx.fillText('Turtle Stack', W / 2, 92);
-    // TOP 4
+    // TOP 5
     if (board.length) {
       ctx.fillStyle = T.ui;
       ctx.font = 'bold 8px monospace';
-      ctx.fillText('TOP 4', W / 2, 130);
+      ctx.fillText('TOP 5', W / 2, 130);
       ctx.font = '8px monospace';
       board.forEach((e, i) => {
         const yy = 143 + i * 11;
@@ -641,11 +601,11 @@ function draw(now) {
     ctx.fillText('BEST ' + Math.max(best, score()), W - 6, 12);
   }
 
-  if (state === 'over' && !nameActive && performance.now() - overAt > 350) {
+  if (state === 'over' && !nameActive() && performance.now() - overAt > 350) {
     ctx.fillStyle = C.ink;
-    ctx.fillRect(14, 86, 152, 130);
+    ctx.fillRect(14, 86, 152, 140);
     ctx.fillStyle = C.panel;
-    ctx.fillRect(16, 88, 148, 126);
+    ctx.fillRect(16, 88, 148, 136);
     ctx.textAlign = 'center';
     ctx.fillStyle = C.ink;
     ctx.font = 'bold 13px monospace';
@@ -658,11 +618,11 @@ function draw(now) {
       ctx.font = '8px monospace';
       ctx.fillText('NEW BEST!', W / 2, 142);
     }
-    // TOP 4 (내 기록은 초록으로)
+    // TOP 5 (내 기록은 초록으로)
     ctx.font = '8px monospace';
     board.forEach((e, i) => {
       const yy = 156 + i * 11;
-      ctx.fillStyle = e === lastEntry ? C.green : C.ink;
+      ctx.fillStyle = lastEntry && e.n === lastEntry.n && e.s === lastEntry.s ? C.green : C.ink;
       ctx.textAlign = 'left';
       ctx.fillText((i + 1) + ' ' + e.n, 34, yy);
       ctx.textAlign = 'right';
@@ -671,7 +631,7 @@ function draw(now) {
     if (blink && performance.now() - overAt > 500) {
       ctx.textAlign = 'center';
       ctx.fillStyle = C.ink;
-      ctx.fillText('SPACE / TAP TO RESTART', W / 2, 208);
+      ctx.fillText('SPACE / TAP TO RESTART', W / 2, 218);
     }
   }
 }
