@@ -27,7 +27,7 @@ import GameBoard from "../../components/GameBoard.astro";
         <div id="ttInfo">
           <div id="ttRemain">40</div>
           <div class="tt-info-s">lines remaining</div>
-          <div class="tt-info-s" id="ttRestartHint">F4 to restart</div>
+          <div class="tt-info-s" id="ttRestartHint">E to restart</div>
         </div>
       </div>
     </div>
@@ -235,7 +235,7 @@ const ACTIONS = [
 ];
 const DEFAULTS = {
   keys: { left: 'ArrowLeft', right: 'ArrowRight', sd: 'ArrowDown', hd: 'Shift', ccw: 'KeyZ',
-          cw: 'Space', r180: 'KeyA', hold: 'KeyQ', restart: 'F4' },
+          cw: 'Space', r180: 'KeyA', hold: 'KeyQ', restart: 'KeyE' },
   das: 117, arr: 40, sdf: 2,   // 사용자 Jstris DAS 그대로. ARR 0(벽까지 순간이동)만 40ms 한 칸씩으로 바꿨다
 };
 // 소프트드롭: Jstris는 프레임마다 1+extra칸. 60Hz 기준으로 시간화했다.
@@ -252,10 +252,13 @@ const clone = o => JSON.parse(JSON.stringify(o));
 let S = clone(DEFAULTS);
 // 기본 핸들링(DEFAULTS.das·arr)을 바꾸면 HV를 올린다 — hv가 다른 저장은 키 배치만 살리고 DAS/ARR/SDF는 새 기본값으로
 const HV = 5;
+// 기본 키를 바꾸면 KV를 올린다 — kv가 다른 저장에 옛 기본 키가 남아 있으면 새 기본값으로 한 번 옮긴다
+const KV = 2;   // 2: 재시작 F4 → E
 try {
   const s = [SKEY].concat(OLDSKEYS).map(k => JSON.parse(localStorage.getItem(k))).find(Boolean);
   if (s) {
     S.keys = Object.assign({}, DEFAULTS.keys, s.keys || {});
+    if (s.kv !== KV && S.keys.restart === 'F4' && !actionOf('KeyE')) S.keys.restart = 'KeyE';
     if (s.hv === HV) {
       if (Number.isFinite(s.das)) S.das = s.das;
       if (Number.isFinite(s.arr)) S.arr = s.arr;
@@ -263,7 +266,7 @@ try {
     }
   }
 } catch (e) {}
-function saveSettings() { try { localStorage.setItem(SKEY, JSON.stringify(Object.assign({ hv: HV }, S))); } catch (e) {} }
+function saveSettings() { try { localStorage.setItem(SKEY, JSON.stringify(Object.assign({ hv: HV, kv: KV }, S))); } catch (e) {} }
 
 function norm(code) {
   if (/^Shift/.test(code)) return 'Shift';
