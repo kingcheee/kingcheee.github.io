@@ -58,6 +58,8 @@ document.addEventListener('astro:before-swap', () => {
   dead = true;
   ac.abort();
   document.body.style.background = '';   // 밤 테마가 다른 페이지로 새지 않게
+  bgmStop();                              // BGM이 다른 페이지까지 따라오지 않게
+  if (AC) AC.close().catch(() => {});
 }, { once: true });
 const on = (target, ev, fn, opts) =>
   target.addEventListener(ev, fn, Object.assign({ signal: ac.signal }, opts));
@@ -124,6 +126,116 @@ const snd = {
   over:    () => beep(220, 0.35, 0.045, 70),
 };
 
+// ── BGM (8비트 칩튠: 25% 펄스 리드 + 삼각파 베이스 + 노이즈 드럼) ──
+// 악보는 8분음표 한 칸 단위: 음이름 = 새 음, '-' = 앞 음 연장, '.' = 쉼표, '|' = 마디(무시)
+const LEAD =
+  'C5 E5 G5 E5 C6 - G5 - | A4 C5 E5 C5 A5 - E5 - | F5 - A5 - G5 F5 E5 D5 | D5 - G5 - B4 - . . | ' +
+  'C5 E5 G5 E5 C6 - D6 - | E6 - D6 C6 A5 - . A5 | F5 - A5 - G5 - B5 - | C6 - G5 - C6 - . .';
+const BASS = ['C3', 'A2', 'F2', 'G2', 'C3', 'A2', 'D3 G2', 'C3'];  // 마디(또는 반 마디)의 근음
+const midi = s => {
+  const m = /^([A-G])(#?)(\d)$/.exec(s);
+  return 12 * (+m[3] + 1) + { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[m[1]] + (m[2] ? 1 : 0);
+};
+const hz = n => 440 * Math.pow(2, (n - 69) / 12);
+const leadSteps = [];                // 칸마다 null 또는 { f, len }
+{
+  const tok = LEAD.split(/\s+/).filter(t => t && t !== '|');
+  tok.forEach((t, i) => {
+    if (t === '-' || t === '.') { leadSteps.push(null); return; }
+    let len = 1;
+    while (tok[i + len] === '-') len++;
+    leadSteps.push({ f: hz(midi(t)), len });
+  });
+}
+const bassSteps = [];                // 근음과 한 옥타브 위를 번갈아 튕긴다
+for (const bar of BASS) {
+  const roots = bar.split(' ');
+  for (let i = 0; i < 8; i++) {
+    const r = midi(roots[Math.floor(i * roots.length / 8)]);
+    bassSteps.push(hz(i % 2 ? r + 12 : r));
+  }
+}
+const SONG_LEN = leadSteps.length;   // 64칸 = 8마디
+
+let bgmOn = true, bgmBus = null, bgmStep = 0, bgmT = 0;
+let pulseWave = null, noiseBuf = null;
+try { bgmOn = localStorage.getItem('turtle-stack-bgm') !== '0'; } catch (e) {}
+
+function bgmVoices() {               // AudioContext마다 한 번: 펄스 파형·노이즈 버퍼
+  if (pulseWave) return;
+  const N = 32, re = new Float32Array(N), im = new Float32Array(N);
+  for (let n = 1; n < N; n++) re[n] = 2 * Math.sin(Math.PI * n * 0.25) / (Math.PI * n);  // 듀티 25%
+  pulseWave = AC.createPeriodicWave(re, im);
+  noiseBuf = AC.createBuffer(1, AC.sampleRate * 0.5, AC.sampleRate);
+  const d = noiseBuf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+}
+function tone(type, f, t, dur, vol, fEnd) {
+  const o = AC.createOscillator(), g = AC.createGain();
+  if (type === 'pulse') o.setPeriodicWave(pulseWave); else o.type = type;
+  o.frequency.setValueAtTime(f, t);
+  if (fEnd) o.frequency.exponentialRampToValueAtTime(fEnd, t + dur);
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(vol * 0.4, t + dur * 0.85);
+  g.gain.linearRampToValueAtTime(0, t + dur);
+  o.connect(g); g.connect(bgmBus);
+  o.start(t); o.stop(t + dur + 0.02);
+}
+function noise(t, dur, vol, cutoff) {
+  const s = AC.createBufferSource(), fl = AC.createBiquadFilter(), g = AC.createGain();
+  s.buffer = noiseBuf;
+  fl.type = 'highpass'; fl.frequency.value = cutoff;
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  s.connect(fl); fl.connect(g); g.connect(bgmBus);
+  s.start(t); s.stop(t + dur + 0.02);
+}
+function bgmPlayStep(i, t, step) {
+  const L = leadSteps[i];
+  if (L) tone('pulse', L.f, t, L.len * step * 0.9, 0.03);
+  tone('triangle', bassSteps[i], t, step * 0.8, 0.055);
+  const k = i % 8;
+  if (k === 0 || k === 4) tone('triangle', 150, t, 0.09, 0.07, 45);  // 킥
+  else if (k === 2 || k === 6) noise(t, 0.08, 0.025, 1800);          // 스네어
+  else noise(t, 0.025, 0.012, 7000);                                 // 하이햇
+}
+function bgmStart() {
+  if (!AC || !bgmOn || bgmBus) return;
+  try {
+    bgmVoices();
+    bgmBus = AC.createGain();
+    bgmBus.connect(AC.destination);
+    bgmT = AC.currentTime + 0.06;
+  } catch (e) { bgmBus = null; }
+}
+function bgmStop(rewind) {           // 이미 예약된 음은 버스째 페이드아웃
+  if (bgmBus) {
+    const b = bgmBus;
+    bgmBus = null;
+    try { b.gain.setTargetAtTime(0, AC.currentTime, 0.02); } catch (e) {}
+    setTimeout(() => { try { b.disconnect(); } catch (e) {} }, 300);
+  }
+  if (rewind) bgmStep = 0;
+}
+function bgmTick() {                 // 매 프레임 0.15초 앞까지 미리 예약. 높이 오를수록 템포가 빨라진다
+  if (!bgmBus) return;
+  const step = 30 / (140 + Math.min(40, score() * 0.8));
+  if (bgmT < AC.currentTime) bgmT = AC.currentTime + 0.02;  // 프레임이 멎었으면 밀린 음은 건너뛴다
+  try {
+    while (bgmT < AC.currentTime + 0.15) {
+      bgmPlayStep(bgmStep, bgmT, step);
+      bgmT += step;
+      bgmStep = (bgmStep + 1) % SONG_LEN;
+    }
+  } catch (e) {}
+}
+function toggleBgm() {
+  bgmOn = !bgmOn;
+  try { localStorage.setItem('turtle-stack-bgm', bgmOn ? '1' : '0'); } catch (e) {}
+  if (!bgmOn) bgmStop();
+  else if (state === 'playing' && !paused) bgmStart();
+}
+
 // ── 리더보드 (TOP 5, Supabase — GameBoard 컴포넌트) ─────────
 let board = [];                      // [{ n, s }]
 function loadBoard() {
@@ -142,9 +254,11 @@ loadBoard();
 // ── 상태 ─────────────────────────────────────────────────
 let state, layers, slab, pieces, fxs, clouds, nextCloudY;
 let camY, camTarget, shakeT, shakeMag, streak, overAt, newBest;
+let paused = false;
 
 function reset() {
   state = 'start';
+  paused = false;
   layers = [{ x: (W - W0) / 2, w: W0, y: 0 }];  // y = 층 윗변, 위로 갈수록 음수
   slab = null;
   pieces = []; fxs = []; clouds = [];
@@ -169,12 +283,25 @@ function spawnSlab(w) {
   };
 }
 
+// ── 일시정지 (플레이 중에만) ─────────────────────────────────
+function setPaused(p) {
+  if (state !== 'playing' || p === paused) return;
+  paused = p;
+  if (paused) bgmStop(); else bgmStart();
+}
+// 탭이 숨겨지거나 창이 포커스를 잃으면 자동으로 멈춘다.
+// 액션 게임이라 돌아와도 자동으로 풀지 않는다 — 준비가 되면 직접 푼다
+on(document, 'visibilitychange', () => { if (document.hidden) setPaused(true); });
+on(window, 'blur', () => setPaused(true));
+
 // ── 입력: keydown/pointerdown에서 즉시 발동 ────────────────
 function press() {
   if (nameActive()) return;            // 이름 입력 중에는 게임 입력 무시
+  if (paused) { setPaused(false); return; }  // 멈춘 상태의 입력은 재개만 한다 (드랍 안 함)
   if (state === 'start') {
     state = 'playing';
     spawnSlab(W0);
+    bgmStart();
   } else if (state === 'playing') {
     if (slab && slab.mode === 'slide') {
       slab.mode = 'fall';
@@ -186,6 +313,7 @@ function press() {
       reset();
       state = 'playing';
       spawnSlab(W0);
+      bgmStart();
     }
   }
 }
@@ -194,6 +322,10 @@ on(window, 'keydown', (e) => {
   if (e.code === 'Space') {
     e.preventDefault();
     if (!e.repeat) { initAudio(); press(); }  // 꾹 눌러도 연속 드랍 없음
+  } else if ((e.code === 'KeyP' || e.code === 'Escape') && !e.repeat) {
+    initAudio(); setPaused(!paused);
+  } else if (e.code === 'KeyM' && !e.repeat) {
+    initAudio(); toggleBgm();                 // BGM 켜기/끄기 (기억된다)
   } else if (e.code === 'KeyF' && !e.repeat) {
     showFps = !showFps;                       // FPS 카운터 토글
   }
@@ -202,7 +334,15 @@ on(window, 'keydown', (e) => {
 on(wrap, 'pointerdown', (e) => {
   if (nameActive()) return;
   e.preventDefault();
-  initAudio(); press();
+  initAudio();
+  // 왼쪽 위 버튼 줄(일시정지 · 음표)은 논리 좌표로 판정한다. 손가락용으로 그림보다 넓게 잡는다
+  const r = cv.getBoundingClientRect();
+  const lx = (e.clientX - r.left) * W / r.width, ly = (e.clientY - r.top) * H / r.height;
+  if (ly >= 0 && ly < 22 && lx >= 0) {
+    if (lx < 18 && state === 'playing') { setPaused(!paused); return; }
+    if (lx >= 18 && lx < 38) { toggleBgm(); return; }
+  }
+  press();
 });
 
 // ── 착지 판정 ─────────────────────────────────────────────
@@ -248,6 +388,7 @@ function land() {
 
 function gameOver() {
   state = 'over';
+  bgmStop(true);
   overAt = performance.now();
   shakeT = 0.3; shakeMag = 3;
   const s = score();
@@ -364,7 +505,7 @@ function drawSlab(px, screenY, w, withHead, dir) {
     ctx.fillStyle = C.green;
     ctx.fillRect(lx + 1, y + 12, 3, 2);
   }
-  // 머리는 슬라이드 중에만 (탭하면 쏙 들어간다)
+  // 머리는 첫 블록이 슬라이드 중일 때만 (탭하면 쏙 들어간다)
   if (withHead) {
     const hx = dir > 0 ? x + w - 1 : x - 7;
     ctx.fillStyle = C.ink;
@@ -533,7 +674,7 @@ function draw(now) {
   }
 
   // 움직이는 슬래브
-  if (slab) drawSlab(slab.x, sy(slab.y), slab.w, slab.mode === 'slide', slab.dir);
+  if (slab) drawSlab(slab.x, sy(slab.y), slab.w, slab.mode === 'slide' && layers.length === 1, slab.dir);
 
   // 이펙트
   for (const f of fxs) {
@@ -590,6 +731,9 @@ function draw(now) {
       ctx.fillStyle = T.ui;
       ctx.fillText('SPACE / TAP TO START', W / 2, H - 88);
     }
+    ctx.font = '7px monospace';
+    ctx.fillStyle = T.ui;
+    ctx.fillText('P PAUSE   M MUSIC', W / 2, H - 74);
   } else {
     // 점수
     ctx.textAlign = 'center';
@@ -634,6 +778,39 @@ function draw(now) {
       ctx.fillText('SPACE / TAP TO RESTART', W / 2, 218);
     }
   }
+
+  if (paused) {
+    // 화면을 흐리게 덮고 가운데 패널
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle = T.bg;
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = C.ink;
+    ctx.fillRect(14, 126, 152, 58);
+    ctx.fillStyle = C.panel;
+    ctx.fillRect(16, 128, 148, 54);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = C.ink;
+    ctx.font = 'bold 13px monospace';
+    ctx.fillText('PAUSED', W / 2, 151);
+    if (blink) {
+      ctx.font = '8px monospace';
+      ctx.fillText('SPACE / TAP TO RESUME', W / 2, 170);
+    }
+  }
+
+  // 왼쪽 위 버튼 (덮개 위에 그린다): 일시정지(플레이 중만, 멈추면 ▶) · 음표(BGM 꺼지면 흐리게 + 사선)
+  ctx.fillStyle = T.ui;
+  if (state === 'playing') {
+    if (paused) for (let i = 0; i < 5; i++) ctx.fillRect(6 + i, 6 + i, 1, 9 - 2 * i);
+    else { ctx.fillRect(6, 6, 2, 9); ctx.fillRect(10, 6, 2, 9); }
+  }
+  ctx.globalAlpha = bgmOn ? 1 : 0.4;
+  ctx.fillRect(26, 6, 1, 7);                                // 기둥
+  ctx.fillRect(27, 7, 1, 1); ctx.fillRect(28, 8, 1, 2);     // 깃발
+  ctx.fillRect(24, 12, 3, 1); ctx.fillRect(23, 13, 4, 1); ctx.fillRect(23, 14, 3, 1);  // 머리
+  if (!bgmOn) for (let i = 0; i < 10; i++) ctx.fillRect(21 + i, 5 + i, 1, 1);
+  ctx.globalAlpha = 1;
 }
 
 // ── 루프 ─────────────────────────────────────────────────
@@ -645,7 +822,8 @@ function frame(now) {
   const dt = Math.min(0.05, rawMs / 1000);  // 탭 복귀 시 순간이동 방지
   last = now;
   if (rawMs > 0) fpsAvg += (1000 / rawMs - fpsAvg) * 0.08;
-  update(dt);
+  if (!paused) update(dt);                  // 멈춘 동안엔 세계가 그대로 (그리기만 계속)
+  bgmTick();
   draw(now);
   requestAnimationFrame(frame);
 }
