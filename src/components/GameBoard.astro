@@ -92,12 +92,14 @@ async function submit(g, name, value) {
     return;
   }
   try {
-    await fetch(SUPABASE_URL + '/rest/v1/scores', {
+    const r = await fetch(SUPABASE_URL + '/rest/v1/scores', {
       method: 'POST',
       headers: Object.assign({ 'Content-Type': 'application/json', Prefer: 'return=minimal' }, hdr),
       body: JSON.stringify(row),
     });
-  } catch (e) {}
+    // 새 게임 키는 DB 제약 scores_game_check에도 넣어야 한다 — 안 넣으면 여기서 400이 난다
+    if (!r.ok) console.warn('[TurtleBoard] submit failed', r.status, await r.text());
+  } catch (e) { console.warn('[TurtleBoard] submit error', e); }
 }
 
 // ── 이름 입력창 ──────────────────────────────────────────
